@@ -71,6 +71,12 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
             )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "获取密钥：DeepSeek 开放平台 → API Keys（https://platform.deepseek.com）",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+            )
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
                 value = apiKey,
