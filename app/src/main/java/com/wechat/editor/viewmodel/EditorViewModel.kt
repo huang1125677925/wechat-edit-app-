@@ -297,6 +297,16 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         )
     }
 
+    /** Inline-styled fragment for the WeChat Official Account web editor (no document-level CSS). */
+    fun getWeChatPasteHtml(): String {
+        return HtmlGenerator.generateWeChatPasteHtml(
+            _contentValue.value.text,
+            _layoutSettings.value,
+            _article.value.title,
+            _article.value.author
+        )
+    }
+
     fun saveArticle(): Article {
         val saved = _article.value.copy(
             title = _titleValue.value.text,
