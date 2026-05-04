@@ -128,8 +128,8 @@ fun EditorScreen(
                     }
                     IconButton(onClick = {
                         val html = viewModel.getWeChatPasteHtml()
-                        ClipboardUtils.copyToClipboard(context, html, "WeChat Article HTML")
-                        viewModel.clearSnackbar()
+                        ClipboardUtils.copyHtmlToClipboard(context, html, "WeChat Article HTML")
+                        viewModel.showSnackbar("已复制，可直接粘贴到公众号编辑器")
                     }) {
                         Icon(Icons.Default.ContentCopy, contentDescription = "复制HTML")
                     }
