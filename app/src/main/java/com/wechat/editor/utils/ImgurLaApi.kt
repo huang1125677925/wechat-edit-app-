@@ -11,19 +11,20 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Minimal client for the img.remit.ee image hosting API.
+ * Client for [imgur.la API v1.1](https://www.imgur.la/api-v1).
  *
- * No authentication required. POST multipart/form-data with a "file" field.
- * Response: { "success": true, "url": "/api/file/..." }
- * Full image URL = "https://img.remit.ee" + url
+ * POST multipart/form-data to `/api/1/upload` with field [source] (binary file).
+ * Auth: `X-API-Key` header (public demo key; replace with your key from account settings if needed).
  *
- * Limits: max 20 MB per file, supports JPG/PNG/GIF/WebP/PDF.
+ * Supported types per host: AVIF, JPG, PNG, GIF, WebP, etc.; max ~10 MB per file.
  */
-object RemiteeApi {
+object ImgurLaApi {
 
-    private const val BASE_URL = "https://img.remit.ee"
-    private const val UPLOAD_URL = "$BASE_URL/api/upload"
-    private const val BOUNDARY = "----RemiteeBoundary7MA4YWxkTrZu0gW"
+    private const val HOST = "https://www.imgur.la"
+    private const val UPLOAD_URL = "$HOST/api/1/upload"
+    /** Public API key from imgur.la documentation; override in settings for your own quota. */
+    private const val API_KEY = "89bf00be2f91e3e5c74ea050d5b1d3f3"
+    private const val BOUNDARY = "----ImgurLaBoundary7MA4YWxkTrZu0gW"
 
     sealed class Result<out T> {
         data class Success<T>(val data: T) : Result<T>()
@@ -43,6 +44,7 @@ object RemiteeApi {
                 requestMethod = "POST"
                 doOutput = true
                 setRequestProperty("Accept", "application/json")
+                setRequestProperty("X-API-Key", API_KEY)
                 setRequestProperty("Content-Type", "multipart/form-data; boundary=$BOUNDARY")
                 connectTimeout = 30_000
                 readTimeout = 60_000
@@ -50,7 +52,9 @@ object RemiteeApi {
 
             DataOutputStream(conn.outputStream).use { out ->
                 out.writeBytes("--$BOUNDARY\r\n")
-                out.writeBytes("Content-Disposition: form-data; name=\"file\"; filename=\"$filename\"\r\n")
+                out.writeBytes(
+                    "Content-Disposition: form-data; name=\"source\"; filename=\"$filename\"\r\n"
+                )
                 out.writeBytes("Content-Type: $mimeType\r\n\r\n")
                 out.write(bytes)
                 out.writeBytes("\r\n")
@@ -73,17 +77,38 @@ object RemiteeApi {
     private fun parseUploadResponse(body: String, code: Int): Result<UploadedImage> {
         return try {
             val json = JSONObject(body)
-            val success = json.optBoolean("success", false)
-            val urlPath = json.optString("url", "")
+            val statusCode = json.optInt("status_code", code)
+            val imageObj = json.optJSONObject("image")
 
-            if (success && urlPath.isNotBlank()) {
-                Result.Success(UploadedImage(url = "$BASE_URL$urlPath"))
+            if (statusCode == 200 && imageObj != null) {
+                val rawUrl = imageObj.optString("url", "")
+                    .ifBlank { imageObj.optString("display_url", "") }
+                    .ifBlank { imageObj.optString("url_viewer", "") }
+
+                if (rawUrl.isNotBlank()) {
+                    Result.Success(UploadedImage(url = absolutizeUrl(rawUrl)))
+                } else {
+                    Result.Error("响应中缺少图片链接", statusCode)
+                }
             } else {
-                val message = json.optString("message", "上传失败")
-                Result.Error(if (message.isNotBlank()) message else "响应中缺少图片链接", code)
+                val message = json.optString("status_txt", "")
+                    .ifBlank { json.optJSONObject("error")?.optString("message") }
+                    .ifBlank { "上传失败" }
+                Result.Error(message, statusCode)
             }
         } catch (e: Exception) {
             Result.Error("响应解析失败：${e.localizedMessage}", code)
+        }
+    }
+
+    private fun absolutizeUrl(raw: String): String {
+        val fixedLocalhost = raw.replace("http://localhost", HOST)
+        return when {
+            fixedLocalhost.startsWith("http://") || fixedLocalhost.startsWith("https://") ->
+                fixedLocalhost
+            fixedLocalhost.startsWith("//") -> "https:$fixedLocalhost"
+            fixedLocalhost.startsWith("/") -> "$HOST$fixedLocalhost"
+            else -> fixedLocalhost
         }
     }
 
