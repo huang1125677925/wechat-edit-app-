@@ -369,6 +369,10 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         _editorState.update { it.copy(showTemplateDialog = false) }
     }
 
+    fun showSnackbar(message: String) {
+        _snackbarMessage.value = message
+    }
+
     fun clearSnackbar() {
         _snackbarMessage.value = null
     }
