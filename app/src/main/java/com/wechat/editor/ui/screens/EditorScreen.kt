@@ -1,5 +1,7 @@
 package com.wechat.editor.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -36,7 +38,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -47,6 +51,8 @@ import androidx.compose.ui.unit.sp
 import com.wechat.editor.model.ColorPickerTarget
 import com.wechat.editor.ui.components.ColorPickerDialog
 import com.wechat.editor.ui.components.FormatToolbar
+import com.wechat.editor.ui.components.HelloImgSettingsDialog
+import com.wechat.editor.ui.components.ImageInsertDialog
 import com.wechat.editor.ui.components.LinkDialog
 import com.wechat.editor.ui.components.TemplateDialog
 import com.wechat.editor.utils.ClipboardUtils
@@ -67,6 +73,17 @@ fun EditorScreen(
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+
+    // Pending alt-text while waiting for the user to pick an image from gallery
+    var pendingImageAlt by remember { mutableStateOf("") }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.uploadImageFromUri(uri, pendingImageAlt)
+        }
+    }
 
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let {
@@ -238,7 +255,7 @@ fun EditorScreen(
                             Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
                                 if (contentValue.text.isEmpty()) {
                                     Text(
-                                        "开始编写您的文章内容...\n\n支持Markdown语法：\n• **粗体** *斜体* ~~删除线~~\n• # 标题1  ## 标题2  ### 标题3\n• - 无序列表  1. 有序列表\n• > 引用块\n• ```代码块```\n• [链接文字](URL)",
+                                        "开始编写您的文章内容...\n\n支持Markdown语法：\n• **粗体** *斜体* ~~删除线~~\n• # 标题1  ## 标题2  ### 标题3\n• - 无序列表  1. 有序列表\n• > 引用块\n• ```代码块```\n• [链接文字](URL)\n• ![图片描述](图片URL)",
                                         fontSize = 16.sp,
                                         lineHeight = 28.sp,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
@@ -271,7 +288,8 @@ fun EditorScreen(
         }
     }
 
-    // Dialogs
+    // ── Dialogs ───────────────────────────────────────────────────────────────
+
     if (editorState.showColorPicker) {
         val title = when (editorState.colorPickerTarget) {
             ColorPickerTarget.TEXT -> "选择文字颜色"
@@ -302,6 +320,38 @@ fun EditorScreen(
         LinkDialog(
             onConfirm = viewModel::insertLink,
             onDismiss = viewModel::dismissLinkDialog
+        )
+    }
+
+    if (editorState.showImageDialog) {
+        ImageInsertDialog(
+            isUploading = editorState.isUploadingImage,
+            onInsertUrl = { alt, url -> viewModel.insertImageMarkdown(alt, url) },
+            onPickAndUpload = { alt ->
+                pendingImageAlt = alt
+                imagePickerLauncher.launch("image/*")
+            },
+            onOpenSettings = {
+                viewModel.dismissImageDialog()
+                viewModel.showHelloImgSettings()
+            },
+            onDismiss = viewModel::dismissImageDialog
+        )
+    }
+
+    if (editorState.showHelloImgSettings) {
+        HelloImgSettingsDialog(
+            currentToken = viewModel.appSettings.helloImgToken,
+            currentStrategyId = viewModel.appSettings.helloImgStrategyId,
+            currentAlbumId = viewModel.appSettings.helloImgAlbumId,
+            onSave = { token, strategyId, albumId ->
+                viewModel.appSettings.helloImgToken = token
+                viewModel.appSettings.helloImgStrategyId = strategyId
+                viewModel.appSettings.helloImgAlbumId = albumId
+                viewModel.dismissHelloImgSettings()
+                viewModel.showImageDialog()
+            },
+            onDismiss = viewModel::dismissHelloImgSettings
         )
     }
 
@@ -360,4 +410,3 @@ fun FontSizePickerDialog(
         }
     )
 }
-

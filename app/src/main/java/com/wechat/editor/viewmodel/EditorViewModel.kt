@@ -1,8 +1,13 @@
 package com.wechat.editor.viewmodel
 
+import android.app.Application
+import android.content.ContentResolver
+import android.net.Uri
+import android.webkit.MimeTypeMap
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.wechat.editor.model.Article
 import com.wechat.editor.model.ArticleTemplate
 import com.wechat.editor.model.ColorPickerTarget
@@ -12,13 +17,18 @@ import com.wechat.editor.model.LayoutSettings
 import com.wechat.editor.model.QuoteStyle
 import com.wechat.editor.model.TextAlignment
 import com.wechat.editor.model.TextStyle
+import com.wechat.editor.utils.AppSettings
+import com.wechat.editor.utils.HelloImgApi
 import com.wechat.editor.utils.HtmlGenerator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
-class EditorViewModel : ViewModel() {
+class EditorViewModel(application: Application) : AndroidViewModel(application) {
+
+    val appSettings = AppSettings(application)
 
     private val _article = MutableStateFlow(Article())
     val article: StateFlow<Article> = _article.asStateFlow()
@@ -184,6 +194,15 @@ class EditorViewModel : ViewModel() {
         dismissLinkDialog()
     }
 
+    fun insertImageMarkdown(altText: String, url: String) {
+        val imgMarkdown = "\n![${altText}](${url})\n"
+        val current = _contentValue.value
+        val pos = current.selection.start
+        val newText = current.text.substring(0, pos) + imgMarkdown + current.text.substring(pos)
+        updateContent(TextFieldValue(newText, TextRange(pos + imgMarkdown.length)))
+        dismissImageDialog()
+    }
+
     fun toggleBold() = insertMarkdown("**", "**")
     fun toggleItalic() = insertMarkdown("*", "*")
     fun toggleStrikethrough() = insertMarkdown("~~", "~~")
@@ -327,6 +346,14 @@ class EditorViewModel : ViewModel() {
         _editorState.update { it.copy(showLinkDialog = false) }
     }
 
+    fun showImageDialog() {
+        _editorState.update { it.copy(showImageDialog = true) }
+    }
+
+    fun dismissImageDialog() {
+        _editorState.update { it.copy(showImageDialog = false) }
+    }
+
     fun showTemplateDialog() {
         _editorState.update { it.copy(showTemplateDialog = true) }
     }
@@ -335,7 +362,59 @@ class EditorViewModel : ViewModel() {
         _editorState.update { it.copy(showTemplateDialog = false) }
     }
 
+    fun showHelloImgSettings() {
+        _editorState.update { it.copy(showHelloImgSettings = true) }
+    }
+
+    fun dismissHelloImgSettings() {
+        _editorState.update { it.copy(showHelloImgSettings = false) }
+    }
+
     fun clearSnackbar() {
         _snackbarMessage.value = null
+    }
+
+    // ── Hello图床 upload ──────────────────────────────────────────────────────
+
+    /**
+     * Upload an image selected from the gallery (via [uri]) to Hello图床 and
+     * insert the resulting Markdown image link into the editor content.
+     */
+    fun uploadImageFromUri(uri: Uri, altText: String = "图片") {
+        viewModelScope.launch {
+            _editorState.update { it.copy(isUploadingImage = true, uploadProgress = "正在上传图片…") }
+            try {
+                val cr: ContentResolver = getApplication<Application>().contentResolver
+                val mimeType = cr.getType(uri) ?: "image/jpeg"
+                val ext = MimeTypeMap.getSingleton()
+                    .getExtensionFromMimeType(mimeType) ?: "jpg"
+                val filename = "image_${System.currentTimeMillis()}.$ext"
+                val bytes = cr.openInputStream(uri)?.readBytes()
+                    ?: run {
+                        _snackbarMessage.value = "无法读取图片文件"
+                        _editorState.update { it.copy(isUploadingImage = false, uploadProgress = "") }
+                        return@launch
+                    }
+
+                val token = appSettings.helloImgToken
+                val strategyId = appSettings.helloImgStrategyId.takeIf { it > 0 }
+                val albumId = appSettings.helloImgAlbumId.takeIf { it > 0 }
+
+                when (val result = HelloImgApi.uploadImage(token, bytes, filename, mimeType, strategyId, albumId)) {
+                    is HelloImgApi.Result.Success -> {
+                        insertImageMarkdown(altText, result.data.url)
+                        _snackbarMessage.value = "图片上传成功"
+                    }
+                    is HelloImgApi.Result.Error -> {
+                        _snackbarMessage.value = "上传失败：${result.message}"
+                        _editorState.update { it.copy(isUploadingImage = false, uploadProgress = "") }
+                    }
+                }
+            } catch (e: Exception) {
+                _snackbarMessage.value = "上传出错：${e.localizedMessage}"
+            } finally {
+                _editorState.update { it.copy(isUploadingImage = false, uploadProgress = "") }
+            }
+        }
     }
 }

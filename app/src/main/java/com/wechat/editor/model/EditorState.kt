@@ -14,7 +14,10 @@ data class EditorState(
     val showLineHeightPicker: Boolean = false,
     val showLinkDialog: Boolean = false,
     val showImageDialog: Boolean = false,
-    val showTemplateDialog: Boolean = false
+    val showTemplateDialog: Boolean = false,
+    val showHelloImgSettings: Boolean = false,
+    val isUploadingImage: Boolean = false,
+    val uploadProgress: String = ""
 )
 
 enum class EditorTab {
