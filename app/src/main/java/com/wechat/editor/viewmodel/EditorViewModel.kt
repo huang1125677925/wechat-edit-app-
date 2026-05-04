@@ -350,6 +350,9 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 textColor = "#2C3E50",
                 quoteStyle = QuoteStyle.BACKGROUND
             )
+            // Huasheng-style presets are returned above via [PreviewStylePresets]; this branch
+            // satisfies exhaustiveness if that map is extended without a matching preset.
+            else -> LayoutSettings()
         }
     }
 

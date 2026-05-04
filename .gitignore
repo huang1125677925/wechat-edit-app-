@@ -8,6 +8,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+# Local Android SDK (downloaded for builds in ephemeral environments)
+android-sdk/
 app/release.keystore
 
 # APK files (not tracked in git, produced by CI)
