@@ -112,22 +112,31 @@ object HelloImgApi {
             val json = JSONObject(body)
             val status = json.optBoolean("status", false)
             val message = json.optString("message", "未知错误")
-            if (!status || code !in 200..299) {
-                return Result.Error(message, code)
-            }
-            val data = json.getJSONObject("data")
-            val links = data.getJSONObject("links")
-            Result.Success(
-                UploadedImage(
-                    key = data.optString("key"),
-                    name = data.optString("name"),
-                    url = links.optString("url"),
-                    thumbnailUrl = links.optString("thumbnail_url"),
-                    markdown = links.optString("markdown"),
-                    markdownWithLink = links.optString("markdown_with_link"),
-                    sizeKb = data.optDouble("size", 0.0).toFloat()
+
+            // Try to extract image data regardless of status. Some server-side errors
+            // (e.g. content-review service billing issues) cause status=false even though
+            // the image was stored successfully and a URL is present in the response.
+            val data = json.optJSONObject("data")
+            val links = data?.optJSONObject("links")
+            val url = links?.optString("url").orEmpty()
+
+            if (url.isNotBlank()) {
+                Result.Success(
+                    UploadedImage(
+                        key = data?.optString("key").orEmpty(),
+                        name = data?.optString("name").orEmpty(),
+                        url = url,
+                        thumbnailUrl = links?.optString("thumbnail_url").orEmpty(),
+                        markdown = links?.optString("markdown").orEmpty(),
+                        markdownWithLink = links?.optString("markdown_with_link").orEmpty(),
+                        sizeKb = data?.optDouble("size", 0.0)?.toFloat() ?: 0f
+                    )
                 )
-            )
+            } else if (!status || code !in 200..299) {
+                Result.Error(message, code)
+            } else {
+                Result.Error("响应中缺少图片链接", code)
+            }
         } catch (e: Exception) {
             Result.Error("响应解析失败：${e.localizedMessage}", code)
         }
