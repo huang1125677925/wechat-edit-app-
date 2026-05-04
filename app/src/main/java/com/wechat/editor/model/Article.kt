@@ -42,6 +42,7 @@ data class LayoutSettings(
     val baseFontSize: Int = 16,
     val lineHeight: Float = 1.75f,
     val paragraphSpacing: Int = 12,
+    val firstLineIndent: Boolean = false,
     val contentMaxWidth: Int = 677,
     val primaryColor: String = "#1AAD19",
     val textColor: String = "#333333",
@@ -50,6 +51,9 @@ data class LayoutSettings(
     val h1Size: Int = 22,
     val h2Size: Int = 20,
     val h3Size: Int = 18,
+    val h1Style: H1Style = H1Style.UNDERLINE_BORDER,
+    val h2Style: H2Style = H2Style.LEFT_BORDER,
+    val h3Style: H3Style = H3Style.THIN_LEFT_BORDER,
     val quoteStyle: QuoteStyle = QuoteStyle.LEFT_BORDER,
     val codeStyle: CodeStyle = CodeStyle.DARK
 )
@@ -64,6 +68,33 @@ enum class CodeStyle(val displayName: String) {
     DARK("深色主题"),
     LIGHT("浅色主题"),
     GITHUB("GitHub风格")
+}
+
+/** Visual style preset for H1 headings. */
+enum class H1Style(val displayName: String, val description: String) {
+    UNDERLINE_BORDER("底部边框", "粗体 + 下划线边框（默认）"),
+    BACKGROUND_BLOCK("背景色块", "全宽色块背景，白色文字"),
+    LEFT_ACCENT("左侧色块", "左侧粗条 + 颜色文字"),
+    CENTERED_LINE("居中分割线", "居中显示，上下装饰线"),
+    PLAIN_BOLD("简洁粗体", "仅加粗，无额外装饰")
+}
+
+/** Visual style preset for H2 headings. */
+enum class H2Style(val displayName: String, val description: String) {
+    LEFT_BORDER("左边框", "左侧竖线装饰（默认）"),
+    DOT_PREFIX("圆点前缀", "实心圆点 + 颜色文字"),
+    UNDERLINE("下划虚线", "文字 + 下方虚线"),
+    BACKGROUND_LIGHT("浅色背景", "圆角浅色背景色块"),
+    PLAIN_COLOR("纯色文字", "仅变色，无其他装饰")
+}
+
+/** Visual style preset for H3 headings. */
+enum class H3Style(val displayName: String, val description: String) {
+    THIN_LEFT_BORDER("细左边框", "细竖线 + 正文色文字（默认）"),
+    ARROW_PREFIX("箭头前缀", "▶ 符号前缀"),
+    BOLD_SUBTITLE("加粗副标题", "加粗、略小，无装饰线"),
+    ITALIC_COLOR("斜体颜色", "斜体 + 主色"),
+    CIRCLE_BULLET("圆圈序号", "○ 前缀 + 正文色")
 }
 
 data class TextStyle(

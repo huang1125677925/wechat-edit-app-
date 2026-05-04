@@ -51,8 +51,10 @@ import androidx.compose.ui.unit.sp
 import com.wechat.editor.model.ColorPickerTarget
 import com.wechat.editor.ui.components.ColorPickerDialog
 import com.wechat.editor.ui.components.FormatToolbar
+import com.wechat.editor.ui.components.HeadingStyleDialog
 import com.wechat.editor.ui.components.ImageInsertDialog
 import com.wechat.editor.ui.components.LinkDialog
+import com.wechat.editor.ui.components.ParagraphSettingsDialog
 import com.wechat.editor.ui.components.TemplateDialog
 import com.wechat.editor.utils.ClipboardUtils
 import com.wechat.editor.viewmodel.EditorViewModel
@@ -69,6 +71,7 @@ fun EditorScreen(
     val titleValue by viewModel.titleValue.collectAsState()
     val contentValue by viewModel.contentValue.collectAsState()
     val authorValue by viewModel.authorValue.collectAsState()
+    val layoutSettings by viewModel.layoutSettings.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -339,6 +342,27 @@ fun EditorScreen(
             currentTemplate = article.template,
             onTemplateSelected = viewModel::applyTemplate,
             onDismiss = viewModel::dismissTemplateDialog
+        )
+    }
+
+    if (editorState.showHeadingStyleDialog) {
+        HeadingStyleDialog(
+            level = editorState.headingStyleLevel,
+            layout = layoutSettings,
+            onApplyH1 = viewModel::applyH1Style,
+            onApplyH2 = viewModel::applyH2Style,
+            onApplyH3 = viewModel::applyH3Style,
+            onDismiss = viewModel::dismissHeadingStyleDialog
+        )
+    }
+
+    if (editorState.showParagraphSettingsDialog) {
+        ParagraphSettingsDialog(
+            layout = layoutSettings,
+            onApplyLineHeight = viewModel::applyLineHeight,
+            onApplyParagraphSpacing = viewModel::applyParagraphSpacing,
+            onToggleFirstLineIndent = viewModel::toggleFirstLineIndent,
+            onDismiss = viewModel::dismissParagraphSettingsDialog
         )
     }
 }
