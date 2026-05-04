@@ -22,12 +22,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -63,7 +63,8 @@ import com.wechat.editor.viewmodel.ArticleListViewModel
 fun ArticleListScreen(
     viewModel: ArticleListViewModel,
     onNewArticle: () -> Unit,
-    onOpenArticle: (Article) -> Unit
+    onOpenArticle: (Article) -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val articles by viewModel.articles.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -90,6 +91,12 @@ fun ArticleListScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "设置"
+                        )
+                    }
                     IconButton(onClick = {
                         showSearch = !showSearch
                         if (!showSearch) viewModel.updateSearchQuery("")

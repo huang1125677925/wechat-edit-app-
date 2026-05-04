@@ -10,9 +10,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.wechat.editor.viewmodel.ArticleListViewModel
 import com.wechat.editor.viewmodel.EditorViewModel
+import com.wechat.editor.viewmodel.SettingsViewModel
 
 sealed class Screen(val route: String) {
     object ArticleList : Screen("article_list")
+    object Settings : Screen("settings")
     object Editor : Screen("editor/{articleId}") {
         fun createRoute(articleId: String = "new") = "editor/$articleId"
     }
@@ -22,7 +24,8 @@ sealed class Screen(val route: String) {
 fun WeChatEditorNavGraph(
     navController: NavHostController,
     articleListViewModel: ArticleListViewModel = viewModel(),
-    editorViewModel: EditorViewModel = viewModel()
+    editorViewModel: EditorViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel()
 ) {
     NavHost(
         navController = navController,
@@ -38,7 +41,15 @@ fun WeChatEditorNavGraph(
                 onOpenArticle = { article ->
                     editorViewModel.loadArticle(article)
                     navController.navigate(Screen.Editor.createRoute(article.id))
-                }
+                },
+                onOpenSettings = { navController.navigate(Screen.Settings.route) }
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                viewModel = settingsViewModel,
+                onBack = { navController.popBackStack() }
             )
         }
 

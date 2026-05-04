@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.FormatAlignCenter
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.InsertLink
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +63,7 @@ import com.wechat.editor.viewmodel.EditorViewModel
 fun FormatToolbar(
     viewModel: EditorViewModel,
     selectedTab: EditorTab,
+    isDeepSeekBusy: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -102,7 +105,7 @@ fun FormatToolbar(
             when (selectedTab) {
                 EditorTab.FORMAT -> FormatTab(viewModel)
                 EditorTab.PARAGRAPH -> ParagraphTab(viewModel)
-                EditorTab.INSERT -> InsertTab(viewModel)
+                EditorTab.INSERT -> InsertTab(viewModel, isDeepSeekBusy)
                 EditorTab.TEMPLATE -> TemplateTab(viewModel)
             }
         }
@@ -226,7 +229,7 @@ private fun ParagraphTab(viewModel: EditorViewModel) {
 }
 
 @Composable
-private fun InsertTab(viewModel: EditorViewModel) {
+private fun InsertTab(viewModel: EditorViewModel, isDeepSeekBusy: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -235,6 +238,17 @@ private fun InsertTab(viewModel: EditorViewModel) {
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (isDeepSeekBusy) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(28.dp),
+                strokeWidth = 2.dp
+            )
+        } else {
+            ToolbarIconButton(icon = Icons.Default.AutoAwesome, label = "DeepSeek 排版") {
+                viewModel.polishContentWithDeepSeek()
+            }
+        }
+        ToolbarDivider()
         ToolbarIconButton(icon = Icons.Default.InsertLink, label = "链接") {
             viewModel.showLinkDialog()
         }
