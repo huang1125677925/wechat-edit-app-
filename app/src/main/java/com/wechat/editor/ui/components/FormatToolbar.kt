@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.FormatAlignCenter
@@ -244,7 +243,7 @@ private fun InsertTab(viewModel: EditorViewModel, isDeepSeekBusy: Boolean) {
                 strokeWidth = 2.dp
             )
         } else {
-            ToolbarIconButton(icon = Icons.Default.AutoAwesome, label = "DeepSeek 排版") {
+            ToolbarTextButton(text = "AI排版") {
                 viewModel.polishContentWithDeepSeek()
             }
         }
