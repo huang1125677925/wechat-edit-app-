@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.sp
 import com.wechat.editor.model.ColorPickerTarget
 import com.wechat.editor.ui.components.ColorPickerDialog
 import com.wechat.editor.ui.components.FormatToolbar
-import com.wechat.editor.ui.components.HelloImgSettingsDialog
 import com.wechat.editor.ui.components.ImageInsertDialog
 import com.wechat.editor.ui.components.LinkDialog
 import com.wechat.editor.ui.components.TemplateDialog
@@ -331,27 +330,7 @@ fun EditorScreen(
                 pendingImageAlt = alt
                 imagePickerLauncher.launch("image/*")
             },
-            onOpenSettings = {
-                viewModel.dismissImageDialog()
-                viewModel.showHelloImgSettings()
-            },
             onDismiss = viewModel::dismissImageDialog
-        )
-    }
-
-    if (editorState.showHelloImgSettings) {
-        HelloImgSettingsDialog(
-            currentToken = viewModel.appSettings.helloImgToken,
-            currentStrategyId = viewModel.appSettings.helloImgStrategyId,
-            currentAlbumId = viewModel.appSettings.helloImgAlbumId,
-            onSave = { token, strategyId, albumId ->
-                viewModel.appSettings.helloImgToken = token
-                viewModel.appSettings.helloImgStrategyId = strategyId
-                viewModel.appSettings.helloImgAlbumId = albumId
-                viewModel.dismissHelloImgSettings()
-                viewModel.showImageDialog()
-            },
-            onDismiss = viewModel::dismissHelloImgSettings
         )
     }
 

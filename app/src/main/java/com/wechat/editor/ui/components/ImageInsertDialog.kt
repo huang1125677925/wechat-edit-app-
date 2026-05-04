@@ -13,15 +13,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertLink
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
@@ -41,15 +38,14 @@ import androidx.compose.ui.unit.sp
 
 /**
  * Dialog for inserting images. Provides two tabs:
- *  1. URL – paste an external/Hello图床 URL directly.
- *  2. 上传 – pick a local image and upload to Hello图床.
+ *  1. URL – paste an external URL directly.
+ *  2. 上传 – pick a local image and upload to img.remit.ee (no token required).
  */
 @Composable
 fun ImageInsertDialog(
     isUploading: Boolean,
     onInsertUrl: (altText: String, url: String) -> Unit,
     onPickAndUpload: (altText: String) -> Unit,
-    onOpenSettings: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -90,7 +86,7 @@ fun ImageInsertDialog(
 
                 when (selectedTab) {
                     0 -> UrlInsertTab(onInsertUrl)
-                    1 -> UploadTab(isUploading, onPickAndUpload, onOpenSettings)
+                    1 -> UploadTab(isUploading, onPickAndUpload)
                 }
             }
         },
@@ -120,7 +116,7 @@ private fun UrlInsertTab(onInsert: (altText: String, url: String) -> Unit) {
             value = url,
             onValueChange = { url = it },
             label = { Text("图片 URL *") },
-            placeholder = { Text("https://www.helloimg.com/…") },
+            placeholder = { Text("https://img.remit.ee/…") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             leadingIcon = {
@@ -144,8 +140,7 @@ private fun UrlInsertTab(onInsert: (altText: String, url: String) -> Unit) {
 @Composable
 private fun UploadTab(
     isUploading: Boolean,
-    onPickAndUpload: (altText: String) -> Unit,
-    onOpenSettings: () -> Unit
+    onPickAndUpload: (altText: String) -> Unit
 ) {
     var altText by remember { mutableStateOf("") }
 
@@ -187,16 +182,11 @@ private fun UploadTab(
         HorizontalDivider()
         Spacer(Modifier.height(8.dp))
 
-        OutlinedButton(
-            onClick = onOpenSettings,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-        ) {
-            Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-            Text("配置 Hello图床 Token", fontSize = 13.sp)
-        }
+        Text(
+            text = "上传至 img.remit.ee，无需注册，单文件最大 20MB，支持 JPG/PNG/GIF/WebP 等格式。",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+            lineHeight = 17.sp
+        )
     }
 }
