@@ -406,7 +406,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                         _snackbarMessage.value = "图片上传成功"
                     }
                     is HelloImgApi.Result.Error -> {
-                        _snackbarMessage.value = "上传失败：${result.message}"
+                        val hint = if (token.isBlank()) "（请在设置中配置您的 Hello图床 Token）" else ""
+                        _snackbarMessage.value = "上传失败：${result.message}$hint"
                         _editorState.update { it.copy(isUploadingImage = false, uploadProgress = "") }
                     }
                 }
