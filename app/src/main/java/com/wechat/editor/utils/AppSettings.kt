@@ -13,7 +13,7 @@ class AppSettings(context: Context) {
         context.getSharedPreferences("wechat_editor_prefs", Context.MODE_PRIVATE)
 
     var helloImgToken: String
-        get() = prefs.getString(KEY_HELLOIMG_TOKEN, "") ?: ""
+        get() = prefs.getString(KEY_HELLOIMG_TOKEN, DEFAULT_TOKEN) ?: DEFAULT_TOKEN
         set(value) = prefs.edit { putString(KEY_HELLOIMG_TOKEN, value) }
 
     var helloImgStrategyId: Int
@@ -28,5 +28,8 @@ class AppSettings(context: Context) {
         private const val KEY_HELLOIMG_TOKEN = "helloimg_token"
         private const val KEY_HELLOIMG_STRATEGY_ID = "helloimg_strategy_id"
         private const val KEY_HELLOIMG_ALBUM_ID = "helloimg_album_id"
+
+        // Pre-configured token; users can override in the settings dialog.
+        private const val DEFAULT_TOKEN = "1618|dvkEfq3RjkYIGeAQTQEfO2mLDZ0QcxR68EscUNlH"
     }
 }

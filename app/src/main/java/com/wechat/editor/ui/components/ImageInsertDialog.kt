@@ -111,7 +111,7 @@ private fun UrlInsertTab(onInsert: (altText: String, url: String) -> Unit) {
             value = altText,
             onValueChange = { altText = it },
             label = { Text("图片描述（Alt）") },
-            placeholder = { Text("可选，留空则使用"图片"") },
+            placeholder = { Text("可选，留空默认为\"图片\"") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -154,7 +154,7 @@ private fun UploadTab(
             value = altText,
             onValueChange = { altText = it },
             label = { Text("图片描述（Alt）") },
-            placeholder = { Text("可选，留空则使用"图片"") },
+            placeholder = { Text("可选，留空默认为\"图片\"") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
