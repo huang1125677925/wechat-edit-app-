@@ -91,9 +91,10 @@ object ImgurLaApi {
                     Result.Error("响应中缺少图片链接", statusCode)
                 }
             } else {
-                val message = json.optString("status_txt", "")
-                    .ifBlank { json.optJSONObject("error")?.optString("message") }
-                    .ifBlank { "上传失败" }
+                val message = sequenceOf(
+                    json.optString("status_txt", ""),
+                    json.optJSONObject("error")?.optString("message").orEmpty()
+                ).firstOrNull { it.isNotBlank() } ?: "上传失败"
                 Result.Error(message, statusCode)
             }
         } catch (e: Exception) {
