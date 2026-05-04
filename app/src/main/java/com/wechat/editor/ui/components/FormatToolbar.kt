@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatStrikethrough
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.HorizontalRule
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertLink
 import androidx.compose.material.icons.filled.Palette
@@ -243,6 +244,10 @@ private fun InsertTab(viewModel: EditorViewModel) {
         }
         ToolbarIconButton(icon = Icons.Default.Code, label = "代码块") {
             viewModel.insertCodeBlock()
+        }
+        ToolbarDivider()
+        ToolbarIconButton(icon = Icons.Default.AutoAwesome, label = "AI 排版") {
+            viewModel.showDeepSeekAiDialog()
         }
         ToolbarDivider()
         ToolbarTextButton(text = "阅读原文") {

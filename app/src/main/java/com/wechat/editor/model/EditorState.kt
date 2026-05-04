@@ -18,6 +18,8 @@ data class EditorState(
     val showLinkDialog: Boolean = false,
     val showImageDialog: Boolean = false,
     val showTemplateDialog: Boolean = false,
+    val showDeepSeekAiDialog: Boolean = false,
+    val isDeepSeekAiLoading: Boolean = false,
     val isUploadingImage: Boolean = false,
     val uploadProgress: String = ""
 )

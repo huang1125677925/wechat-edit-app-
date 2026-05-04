@@ -20,8 +20,10 @@ import com.wechat.editor.model.LayoutSettings
 import com.wechat.editor.model.QuoteStyle
 import com.wechat.editor.model.TextAlignment
 import com.wechat.editor.model.TextStyle
-import com.wechat.editor.utils.ImgurLaApi
+import com.wechat.editor.utils.DeepSeekChatApi
 import com.wechat.editor.utils.HtmlGenerator
+import com.wechat.editor.utils.ImgurLaApi
+import com.wechat.editor.utils.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +31,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class EditorViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val userPreferences = UserPreferences(application)
 
     private val _article = MutableStateFlow(Article())
     val article: StateFlow<Article> = _article.asStateFlow()
@@ -51,8 +55,19 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     private val _layoutSettings = MutableStateFlow(LayoutSettings())
     val layoutSettings: StateFlow<LayoutSettings> = _layoutSettings.asStateFlow()
 
+    private val _deepSeekApiKey = MutableStateFlow("")
+    val deepSeekApiKey: StateFlow<String> = _deepSeekApiKey.asStateFlow()
+
+    private val _deepSeekModel = MutableStateFlow(DeepSeekChatApi.MODEL_V4_FLASH)
+    val deepSeekModel: StateFlow<String> = _deepSeekModel.asStateFlow()
+
     private val undoStack = ArrayDeque<TextFieldValue>()
     private val redoStack = ArrayDeque<TextFieldValue>()
+
+    init {
+        _deepSeekApiKey.value = userPreferences.getDeepSeekApiKey()
+        _deepSeekModel.value = userPreferences.getDeepSeekModel()
+    }
 
     fun loadArticle(article: Article) {
         _article.value = article
@@ -370,6 +385,85 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun dismissTemplateDialog() {
         _editorState.update { it.copy(showTemplateDialog = false) }
+    }
+
+    fun showDeepSeekAiDialog() {
+        _deepSeekApiKey.value = userPreferences.getDeepSeekApiKey()
+        _deepSeekModel.value = userPreferences.getDeepSeekModel()
+        _editorState.update { it.copy(showDeepSeekAiDialog = true) }
+    }
+
+    fun dismissDeepSeekAiDialog() {
+        _editorState.update { it.copy(showDeepSeekAiDialog = false, isDeepSeekAiLoading = false) }
+    }
+
+    /**
+     * Calls DeepSeek V4 (OpenAI-compatible) to polish Markdown layout; API key is stored locally via [UserPreferences].
+     */
+    fun runDeepSeekLayoutAssist(apiKey: String, model: String, userNotes: String) {
+        val trimmedKey = apiKey.trim()
+        val trimmedModel = model.trim().ifBlank { DeepSeekChatApi.MODEL_V4_FLASH }
+        if (trimmedKey.isEmpty()) {
+            _snackbarMessage.value = "请先填写 API Key"
+            return
+        }
+        val body = _contentValue.value.text
+        if (body.isBlank()) {
+            _snackbarMessage.value = "正文为空，无法排版"
+            return
+        }
+
+        userPreferences.setDeepSeekApiKey(trimmedKey)
+        userPreferences.setDeepSeekModel(trimmedModel)
+        _deepSeekApiKey.value = trimmedKey
+        _deepSeekModel.value = trimmedModel
+
+        val systemPrompt = buildString {
+            append(
+                "你是微信公众号长文编辑助手。用户会提供 Markdown 正文。" +
+                    "请在不改变事实与核心观点的前提下，优化排版与可读性：合理使用标题层级、列表、引用、加粗重点；" +
+                    "段落长短适中；删除多余空行；保持中文标点规范。" +
+                    "只输出优化后的 Markdown 全文，不要解释、不要前言后记、不要代码围栏包裹全文。"
+            )
+        }
+
+        val userMessage = buildString {
+            appendLine("【文章标题】${_titleValue.value.text.ifBlank { "（无标题）" }}")
+            appendLine("【作者】${_authorValue.value.text.ifBlank { "（未填）" }}")
+            if (userNotes.isNotBlank()) {
+                appendLine("【排版要求】$userNotes")
+            }
+            appendLine()
+            appendLine("【正文 Markdown】")
+            append(body)
+        }
+
+        viewModelScope.launch {
+            _editorState.update { it.copy(isDeepSeekAiLoading = true) }
+            when (
+                val result = DeepSeekChatApi.chatCompletion(
+                    apiKey = trimmedKey,
+                    model = trimmedModel,
+                    systemPrompt = systemPrompt,
+                    userMessage = userMessage
+                )
+            ) {
+                is DeepSeekChatApi.Result.Success -> {
+                    val md = result.content
+                    if (md.isBlank()) {
+                        _snackbarMessage.value = "模型返回为空"
+                    } else {
+                        updateContent(TextFieldValue(md, TextRange(md.length)))
+                        dismissDeepSeekAiDialog()
+                        _snackbarMessage.value = "AI 排版完成"
+                    }
+                }
+                is DeepSeekChatApi.Result.Error -> {
+                    _snackbarMessage.value = result.message
+                }
+            }
+            _editorState.update { it.copy(isDeepSeekAiLoading = false) }
+        }
     }
 
     fun showHeadingStyleDialog(level: Int) {

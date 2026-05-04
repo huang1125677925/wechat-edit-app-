@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.wechat.editor.model.ColorPickerTarget
 import com.wechat.editor.ui.components.ColorPickerDialog
+import com.wechat.editor.ui.components.DeepSeekAiLayoutDialog
 import com.wechat.editor.ui.components.FormatToolbar
 import com.wechat.editor.ui.components.HeadingStyleDialog
 import com.wechat.editor.ui.components.ImageInsertDialog
@@ -73,6 +74,8 @@ fun EditorScreen(
     val authorValue by viewModel.authorValue.collectAsState()
     val layoutSettings by viewModel.layoutSettings.collectAsState()
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
+    val deepSeekApiKey by viewModel.deepSeekApiKey.collectAsState()
+    val deepSeekModel by viewModel.deepSeekModel.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -363,6 +366,16 @@ fun EditorScreen(
             onApplyParagraphSpacing = viewModel::applyParagraphSpacing,
             onToggleFirstLineIndent = viewModel::toggleFirstLineIndent,
             onDismiss = viewModel::dismissParagraphSettingsDialog
+        )
+    }
+
+    if (editorState.showDeepSeekAiDialog) {
+        DeepSeekAiLayoutDialog(
+            viewModel = viewModel,
+            initialApiKey = deepSeekApiKey,
+            initialModel = deepSeekModel,
+            isLoading = editorState.isDeepSeekAiLoading,
+            onDismiss = viewModel::dismissDeepSeekAiDialog
         )
     }
 }
