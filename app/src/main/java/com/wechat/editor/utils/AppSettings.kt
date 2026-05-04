@@ -29,7 +29,6 @@ class AppSettings(context: Context) {
         private const val KEY_HELLOIMG_STRATEGY_ID = "helloimg_strategy_id"
         private const val KEY_HELLOIMG_ALBUM_ID = "helloimg_album_id"
 
-        // Pre-configured token; users can override in the settings dialog.
-        private const val DEFAULT_TOKEN = "1618|dvkEfq3RjkYIGeAQTQEfO2mLDZ0QcxR68EscUNlH"
+        private const val DEFAULT_TOKEN = ""
     }
 }

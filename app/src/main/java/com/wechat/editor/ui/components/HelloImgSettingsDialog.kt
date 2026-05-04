@@ -67,8 +67,9 @@ fun HelloImgSettingsDialog(
         text = {
             Column {
                 Text(
-                    text = "在 helloimg.com 个人中心获取 API Token，" +
-                            "然后填入下方。未填 Token 则以游客身份上传。",
+                    text = "在 helloimg.com 注册账号并在个人中心获取 API Token，" +
+                            "填入下方后即可使用您自己的账户上传图片。" +
+                            "未填 Token 则以游客身份上传（受限，不推荐）。",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
                     lineHeight = 18.sp
