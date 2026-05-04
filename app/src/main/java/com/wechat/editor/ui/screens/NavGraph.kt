@@ -1,10 +1,13 @@
 package com.wechat.editor.ui.screens
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.wechat.editor.viewmodel.ArticleListViewModel
 import com.wechat.editor.viewmodel.EditorViewModel
 
@@ -39,7 +42,16 @@ fun WeChatEditorNavGraph(
             )
         }
 
-        composable(Screen.Editor.route) {
+        composable(
+            route = Screen.Editor.route,
+            arguments = listOf(
+                navArgument("articleId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val articleId = backStackEntry.arguments?.getString("articleId") ?: "new"
+            LaunchedEffect(articleId) {
+                editorViewModel.onEditorSessionStarted(articleId)
+            }
             EditorScreen(
                 viewModel = editorViewModel,
                 onSave = { article ->

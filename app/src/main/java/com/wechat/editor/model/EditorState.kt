@@ -19,7 +19,9 @@ data class EditorState(
     val showImageDialog: Boolean = false,
     val showTemplateDialog: Boolean = false,
     val isUploadingImage: Boolean = false,
-    val uploadProgress: String = ""
+    val uploadProgress: String = "",
+    /** Wall-clock time of the last successful background draft persist, or null if none yet. */
+    val lastAutoSavedAtEpochMs: Long? = null
 )
 
 enum class EditorTab {
