@@ -17,8 +17,7 @@ import com.wechat.editor.model.LayoutSettings
 import com.wechat.editor.model.QuoteStyle
 import com.wechat.editor.model.TextAlignment
 import com.wechat.editor.model.TextStyle
-import com.wechat.editor.utils.AppSettings
-import com.wechat.editor.utils.HelloImgApi
+import com.wechat.editor.utils.RemiteeApi
 import com.wechat.editor.utils.HtmlGenerator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,8 +26,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class EditorViewModel(application: Application) : AndroidViewModel(application) {
-
-    val appSettings = AppSettings(application)
 
     private val _article = MutableStateFlow(Article())
     val article: StateFlow<Article> = _article.asStateFlow()
@@ -362,22 +359,14 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         _editorState.update { it.copy(showTemplateDialog = false) }
     }
 
-    fun showHelloImgSettings() {
-        _editorState.update { it.copy(showHelloImgSettings = true) }
-    }
-
-    fun dismissHelloImgSettings() {
-        _editorState.update { it.copy(showHelloImgSettings = false) }
-    }
-
     fun clearSnackbar() {
         _snackbarMessage.value = null
     }
 
-    // ── Hello图床 upload ──────────────────────────────────────────────────────
+    // ── img.remit.ee upload ───────────────────────────────────────────────────
 
     /**
-     * Upload an image selected from the gallery (via [uri]) to Hello图床 and
+     * Upload an image selected from the gallery (via [uri]) to img.remit.ee and
      * insert the resulting Markdown image link into the editor content.
      */
     fun uploadImageFromUri(uri: Uri, altText: String = "图片") {
@@ -396,18 +385,13 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                         return@launch
                     }
 
-                val token = appSettings.helloImgToken
-                val strategyId = appSettings.helloImgStrategyId.takeIf { it > 0 }
-                val albumId = appSettings.helloImgAlbumId.takeIf { it > 0 }
-
-                when (val result = HelloImgApi.uploadImage(token, bytes, filename, mimeType, strategyId, albumId)) {
-                    is HelloImgApi.Result.Success -> {
+                when (val result = RemiteeApi.uploadImage(bytes, filename, mimeType)) {
+                    is RemiteeApi.Result.Success -> {
                         insertImageMarkdown(altText, result.data.url)
                         _snackbarMessage.value = "图片上传成功"
                     }
-                    is HelloImgApi.Result.Error -> {
-                        val hint = if (token.isBlank()) "（请在设置中配置您的 Hello图床 Token）" else ""
-                        _snackbarMessage.value = "上传失败：${result.message}$hint"
+                    is RemiteeApi.Result.Error -> {
+                        _snackbarMessage.value = "上传失败：${result.message}"
                         _editorState.update { it.copy(isUploadingImage = false, uploadProgress = "") }
                     }
                 }
