@@ -49,6 +49,18 @@ jobs:
       - name: Install Android SDK components
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
+      # Gradle resolves the SDK from ANDROID_* env vars and local.properties; writing sdk.dir
+      # avoids "SDK location not found" if env is not propagated to the Gradle daemon.
+      - &gradle_android_sdk
+        name: Point Gradle at Android SDK (local.properties)
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [ -z "$SDK" ]; then
+            echo "::error::ANDROID_SDK_ROOT / ANDROID_HOME is not set after setup-android"
+            exit 1
+          fi
+          echo "sdk.dir=$SDK" >> "$GITHUB_WORKSPACE/local.properties"
+
       - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
@@ -108,6 +120,8 @@ jobs:
       - name: Install Android SDK components
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
+      - *gradle_android_sdk
+
       - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
@@ -160,6 +174,8 @@ jobs:
 
       - name: Install Android SDK components
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - *gradle_android_sdk
 
       - name: Cache Gradle packages
         uses: actions/cache@v4
