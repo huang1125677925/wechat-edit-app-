@@ -1,6 +1,9 @@
 package com.wechat.editor.utils
 
 import com.wechat.editor.model.CodeStyle
+import com.wechat.editor.model.H1Style
+import com.wechat.editor.model.H2Style
+import com.wechat.editor.model.H3Style
 import com.wechat.editor.model.LayoutSettings
 import com.wechat.editor.model.QuoteStyle
 
@@ -69,9 +72,6 @@ object HtmlGenerator {
         val tc = layout.textColor
         val sc = layout.subtitleColor
         val ps = layout.paragraphSpacing
-        val h1s = layout.h1Size
-        val h2s = layout.h2Size
-        val h3s = layout.h3Size
         val h4s = layout.h3Size - 2
         val bfs = layout.baseFontSize
 
@@ -102,22 +102,14 @@ object HtmlGenerator {
         s = s.replace("<blockquote>", "<blockquote style=\"$quoteStyleAttr\">")
         s = s.replace("<hr>", "<hr style=\"border:none;border-top:1px solid #eeeeee;margin:24px 0;\" />")
         s = s.replace("<hr/>", "<hr style=\"border:none;border-top:1px solid #eeeeee;margin:24px 0;\" />")
+        val indentStyle = if (layout.firstLineIndent) "text-indent:2em;" else ""
         s = s.replace(
             "<p>",
-            "<p style=\"margin:0 0 ${ps}px;text-align:justify;\">"
+            "<p style=\"margin:0 0 ${ps}px;text-align:justify;$indentStyle\">"
         )
-        s = s.replace(
-            "<h1>",
-            "<h1 style=\"font-size:${h1s}px;color:$pc;margin:28px 0 14px;font-weight:bold;padding-bottom:8px;border-bottom:3px solid $pc;line-height:1.35;\">"
-        )
-        s = s.replace(
-            "<h2>",
-            "<h2 style=\"font-size:${h2s}px;color:$pc;margin:22px 0 10px;font-weight:bold;padding-left:10px;border-left:4px solid $pc;line-height:1.4;\">"
-        )
-        s = s.replace(
-            "<h3>",
-            "<h3 style=\"font-size:${h3s}px;color:$tc;margin:18px 0 8px;font-weight:bold;padding-left:6px;border-left:3px solid $sc;line-height:1.4;\">"
-        )
+        s = s.replace("<h1>", "<h1 style=\"${h1InlineStyle(layout)}\">")
+        s = s.replace("<h2>", "<h2 style=\"${h2InlineStyle(layout)}\">")
+        s = s.replace("<h3>", "<h3 style=\"${h3InlineStyle(layout)}\">")
         s = s.replace(
             "<h4>",
             "<h4 style=\"font-size:${h4s}px;color:$tc;margin:14px 0 6px;font-weight:bold;padding:4px 10px;background-color:rgba(0,0,0,0.04);border-radius:4px;line-height:1.4;\">"
@@ -226,34 +218,11 @@ object HtmlGenerator {
             .article-content p {
                 margin-bottom: ${layout.paragraphSpacing}px;
                 text-align: justify;
+                ${if (layout.firstLineIndent) "text-indent: 2em;" else ""}
             }
-            h1 {
-                font-size: ${layout.h1Size}px;
-                color: ${layout.primaryColor};
-                margin: 28px 0 14px;
-                font-weight: bold;
-                padding-bottom: 8px;
-                border-bottom: 3px solid ${layout.primaryColor};
-                line-height: 1.35;
-            }
-            h2 {
-                font-size: ${layout.h2Size}px;
-                color: ${layout.primaryColor};
-                margin: 22px 0 10px;
-                font-weight: bold;
-                padding-left: 10px;
-                border-left: 4px solid ${layout.primaryColor};
-                line-height: 1.4;
-            }
-            h3 {
-                font-size: ${layout.h3Size}px;
-                color: ${layout.textColor};
-                margin: 18px 0 8px;
-                font-weight: bold;
-                padding-left: 6px;
-                border-left: 3px solid ${layout.subtitleColor};
-                line-height: 1.4;
-            }
+            ${generateH1Css(layout)}
+            ${generateH2Css(layout)}
+            ${generateH3Css(layout)}
             h4 {
                 font-size: ${layout.h3Size - 2}px;
                 color: ${layout.textColor};
@@ -341,6 +310,116 @@ object HtmlGenerator {
             th { background-color: #f5f5f5; font-weight: bold; }
             tr:nth-child(even) { background-color: #fafafa; }
         """.trimIndent()
+    }
+
+    private fun generateH1Css(layout: LayoutSettings): String {
+        val pc = layout.primaryColor
+        val tc = layout.textColor
+        val size = layout.h1Size
+        return when (layout.h1Style) {
+            H1Style.UNDERLINE_BORDER ->
+                "h1 { font-size:${size}px; color:$pc; margin:28px 0 14px; font-weight:bold; padding-bottom:8px; border-bottom:3px solid $pc; line-height:1.35; }"
+            H1Style.BACKGROUND_BLOCK ->
+                "h1 { font-size:${size}px; color:#ffffff; background-color:$pc; margin:28px 0 14px; font-weight:bold; padding:10px 16px; border-radius:4px; line-height:1.35; }"
+            H1Style.LEFT_ACCENT ->
+                "h1 { font-size:${size}px; color:$pc; margin:28px 0 14px; font-weight:bold; padding-left:14px; border-left:6px solid $pc; line-height:1.35; }"
+            H1Style.CENTERED_LINE ->
+                "h1 { font-size:${size}px; color:$tc; margin:28px 0 14px; font-weight:bold; text-align:center; padding:10px 0; border-top:2px solid $pc; border-bottom:2px solid $pc; line-height:1.35; }"
+            H1Style.PLAIN_BOLD ->
+                "h1 { font-size:${size}px; color:$tc; margin:28px 0 14px; font-weight:bold; line-height:1.35; }"
+        }
+    }
+
+    private fun generateH2Css(layout: LayoutSettings): String {
+        val pc = layout.primaryColor
+        val tc = layout.textColor
+        val size = layout.h2Size
+        return when (layout.h2Style) {
+            H2Style.LEFT_BORDER ->
+                "h2 { font-size:${size}px; color:$pc; margin:22px 0 10px; font-weight:bold; padding-left:10px; border-left:4px solid $pc; line-height:1.4; }"
+            H2Style.DOT_PREFIX ->
+                "h2::before { content:'●'; color:$pc; margin-right:8px; font-size:${size - 4}px; } h2 { font-size:${size}px; color:$pc; margin:22px 0 10px; font-weight:bold; line-height:1.4; }"
+            H2Style.UNDERLINE ->
+                "h2 { font-size:${size}px; color:$tc; margin:22px 0 10px; font-weight:bold; padding-bottom:6px; border-bottom:1px dashed $pc; line-height:1.4; }"
+            H2Style.BACKGROUND_LIGHT ->
+                "h2 { font-size:${size}px; color:$pc; margin:22px 0 10px; font-weight:bold; padding:6px 12px; background-color:${pc}1A; border-radius:6px; line-height:1.4; }"
+            H2Style.PLAIN_COLOR ->
+                "h2 { font-size:${size}px; color:$pc; margin:22px 0 10px; font-weight:bold; line-height:1.4; }"
+        }
+    }
+
+    private fun generateH3Css(layout: LayoutSettings): String {
+        val pc = layout.primaryColor
+        val tc = layout.textColor
+        val sc = layout.subtitleColor
+        val size = layout.h3Size
+        return when (layout.h3Style) {
+            H3Style.THIN_LEFT_BORDER ->
+                "h3 { font-size:${size}px; color:$tc; margin:18px 0 8px; font-weight:bold; padding-left:6px; border-left:3px solid $sc; line-height:1.4; }"
+            H3Style.ARROW_PREFIX ->
+                "h3::before { content:'▶'; color:$pc; margin-right:6px; font-size:${size - 2}px; } h3 { font-size:${size}px; color:$tc; margin:18px 0 8px; font-weight:bold; line-height:1.4; }"
+            H3Style.BOLD_SUBTITLE ->
+                "h3 { font-size:${size}px; color:$tc; margin:18px 0 8px; font-weight:bold; line-height:1.4; }"
+            H3Style.ITALIC_COLOR ->
+                "h3 { font-size:${size}px; color:$pc; margin:18px 0 8px; font-weight:bold; font-style:italic; line-height:1.4; }"
+            H3Style.CIRCLE_BULLET ->
+                "h3::before { content:'○'; color:$pc; margin-right:6px; } h3 { font-size:${size}px; color:$tc; margin:18px 0 8px; font-weight:bold; line-height:1.4; }"
+        }
+    }
+
+    private fun h1InlineStyle(layout: LayoutSettings): String {
+        val pc = layout.primaryColor
+        val tc = layout.textColor
+        val size = layout.h1Size
+        return when (layout.h1Style) {
+            H1Style.UNDERLINE_BORDER ->
+                "font-size:${size}px;color:$pc;margin:28px 0 14px;font-weight:bold;padding-bottom:8px;border-bottom:3px solid $pc;line-height:1.35;"
+            H1Style.BACKGROUND_BLOCK ->
+                "font-size:${size}px;color:#ffffff;background-color:$pc;margin:28px 0 14px;font-weight:bold;padding:10px 16px;border-radius:4px;line-height:1.35;"
+            H1Style.LEFT_ACCENT ->
+                "font-size:${size}px;color:$pc;margin:28px 0 14px;font-weight:bold;padding-left:14px;border-left:6px solid $pc;line-height:1.35;"
+            H1Style.CENTERED_LINE ->
+                "font-size:${size}px;color:$tc;margin:28px 0 14px;font-weight:bold;text-align:center;padding:10px 0;border-top:2px solid $pc;border-bottom:2px solid $pc;line-height:1.35;"
+            H1Style.PLAIN_BOLD ->
+                "font-size:${size}px;color:$tc;margin:28px 0 14px;font-weight:bold;line-height:1.35;"
+        }
+    }
+
+    private fun h2InlineStyle(layout: LayoutSettings): String {
+        val pc = layout.primaryColor
+        val tc = layout.textColor
+        val size = layout.h2Size
+        return when (layout.h2Style) {
+            H2Style.LEFT_BORDER ->
+                "font-size:${size}px;color:$pc;margin:22px 0 10px;font-weight:bold;padding-left:10px;border-left:4px solid $pc;line-height:1.4;"
+            H2Style.DOT_PREFIX ->
+                "font-size:${size}px;color:$pc;margin:22px 0 10px;font-weight:bold;line-height:1.4;"
+            H2Style.UNDERLINE ->
+                "font-size:${size}px;color:$tc;margin:22px 0 10px;font-weight:bold;padding-bottom:6px;border-bottom:1px dashed $pc;line-height:1.4;"
+            H2Style.BACKGROUND_LIGHT ->
+                "font-size:${size}px;color:$pc;margin:22px 0 10px;font-weight:bold;padding:6px 12px;background-color:${pc}1A;border-radius:6px;line-height:1.4;"
+            H2Style.PLAIN_COLOR ->
+                "font-size:${size}px;color:$pc;margin:22px 0 10px;font-weight:bold;line-height:1.4;"
+        }
+    }
+
+    private fun h3InlineStyle(layout: LayoutSettings): String {
+        val pc = layout.primaryColor
+        val tc = layout.textColor
+        val sc = layout.subtitleColor
+        val size = layout.h3Size
+        return when (layout.h3Style) {
+            H3Style.THIN_LEFT_BORDER ->
+                "font-size:${size}px;color:$tc;margin:18px 0 8px;font-weight:bold;padding-left:6px;border-left:3px solid $sc;line-height:1.4;"
+            H3Style.ARROW_PREFIX ->
+                "font-size:${size}px;color:$tc;margin:18px 0 8px;font-weight:bold;line-height:1.4;"
+            H3Style.BOLD_SUBTITLE ->
+                "font-size:${size}px;color:$tc;margin:18px 0 8px;font-weight:bold;line-height:1.4;"
+            H3Style.ITALIC_COLOR ->
+                "font-size:${size}px;color:$pc;margin:18px 0 8px;font-weight:bold;font-style:italic;line-height:1.4;"
+            H3Style.CIRCLE_BULLET ->
+                "font-size:${size}px;color:$tc;margin:18px 0 8px;font-weight:bold;line-height:1.4;"
+        }
     }
 
     fun convertMarkdownToHtml(markdown: String): String {

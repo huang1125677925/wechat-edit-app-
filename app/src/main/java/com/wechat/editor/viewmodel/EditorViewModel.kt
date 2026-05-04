@@ -13,6 +13,9 @@ import com.wechat.editor.model.ArticleTemplate
 import com.wechat.editor.model.ColorPickerTarget
 import com.wechat.editor.model.EditorState
 import com.wechat.editor.model.EditorTab
+import com.wechat.editor.model.H1Style
+import com.wechat.editor.model.H2Style
+import com.wechat.editor.model.H3Style
 import com.wechat.editor.model.LayoutSettings
 import com.wechat.editor.model.QuoteStyle
 import com.wechat.editor.model.TextAlignment
@@ -367,6 +370,100 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun dismissTemplateDialog() {
         _editorState.update { it.copy(showTemplateDialog = false) }
+    }
+
+    fun showHeadingStyleDialog(level: Int) {
+        _editorState.update { it.copy(showHeadingStyleDialog = true, headingStyleLevel = level) }
+    }
+
+    fun dismissHeadingStyleDialog() {
+        _editorState.update { it.copy(showHeadingStyleDialog = false) }
+    }
+
+    fun applyH1Style(style: H1Style) {
+        _layoutSettings.update { it.copy(h1Style = style) }
+        _article.update {
+            it.copy(
+                layoutSettings = _layoutSettings.value,
+                htmlContent = HtmlGenerator.generateHtml(
+                    _contentValue.value.text, _layoutSettings.value, it.title, it.author
+                )
+            )
+        }
+        dismissHeadingStyleDialog()
+        _snackbarMessage.value = "已应用H1样式：${style.displayName}"
+    }
+
+    fun applyH2Style(style: H2Style) {
+        _layoutSettings.update { it.copy(h2Style = style) }
+        _article.update {
+            it.copy(
+                layoutSettings = _layoutSettings.value,
+                htmlContent = HtmlGenerator.generateHtml(
+                    _contentValue.value.text, _layoutSettings.value, it.title, it.author
+                )
+            )
+        }
+        dismissHeadingStyleDialog()
+        _snackbarMessage.value = "已应用H2样式：${style.displayName}"
+    }
+
+    fun applyH3Style(style: H3Style) {
+        _layoutSettings.update { it.copy(h3Style = style) }
+        _article.update {
+            it.copy(
+                layoutSettings = _layoutSettings.value,
+                htmlContent = HtmlGenerator.generateHtml(
+                    _contentValue.value.text, _layoutSettings.value, it.title, it.author
+                )
+            )
+        }
+        dismissHeadingStyleDialog()
+        _snackbarMessage.value = "已应用H3样式：${style.displayName}"
+    }
+
+    fun showParagraphSettingsDialog() {
+        _editorState.update { it.copy(showParagraphSettingsDialog = true) }
+    }
+
+    fun dismissParagraphSettingsDialog() {
+        _editorState.update { it.copy(showParagraphSettingsDialog = false) }
+    }
+
+    fun applyLineHeight(lineHeight: Float) {
+        _layoutSettings.update { it.copy(lineHeight = lineHeight) }
+        _article.update {
+            it.copy(
+                layoutSettings = _layoutSettings.value,
+                htmlContent = HtmlGenerator.generateHtml(
+                    _contentValue.value.text, _layoutSettings.value, it.title, it.author
+                )
+            )
+        }
+    }
+
+    fun applyParagraphSpacing(spacing: Int) {
+        _layoutSettings.update { it.copy(paragraphSpacing = spacing) }
+        _article.update {
+            it.copy(
+                layoutSettings = _layoutSettings.value,
+                htmlContent = HtmlGenerator.generateHtml(
+                    _contentValue.value.text, _layoutSettings.value, it.title, it.author
+                )
+            )
+        }
+    }
+
+    fun toggleFirstLineIndent() {
+        _layoutSettings.update { it.copy(firstLineIndent = !it.firstLineIndent) }
+        _article.update {
+            it.copy(
+                layoutSettings = _layoutSettings.value,
+                htmlContent = HtmlGenerator.generateHtml(
+                    _contentValue.value.text, _layoutSettings.value, it.title, it.author
+                )
+            )
+        }
     }
 
     fun showSnackbar(message: String) {

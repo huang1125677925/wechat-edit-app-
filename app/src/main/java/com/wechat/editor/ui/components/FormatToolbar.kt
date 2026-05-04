@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.FormatAlignCenter
 import androidx.compose.material.icons.automirrored.filled.FormatAlignRight
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatLineSpacing
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.FormatSize
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertLink
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Style
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -109,68 +111,116 @@ fun FormatToolbar(
 
 @Composable
 private fun FormatTab(viewModel: EditorViewModel) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        ToolbarIconButton(icon = Icons.Default.FormatBold, label = "粗体") { viewModel.toggleBold() }
-        ToolbarIconButton(icon = Icons.Default.FormatItalic, label = "斜体") { viewModel.toggleItalic() }
-        ToolbarIconButton(icon = Icons.Default.FormatUnderlined, label = "下划线") { viewModel.toggleUnderline() }
-        ToolbarIconButton(icon = Icons.Default.FormatStrikethrough, label = "删除线") { viewModel.toggleStrikethrough() }
-        ToolbarDivider()
-        ToolbarTextButton(text = "H1") { viewModel.insertHeading(1) }
-        ToolbarTextButton(text = "H2") { viewModel.insertHeading(2) }
-        ToolbarTextButton(text = "H3") { viewModel.insertHeading(3) }
-        ToolbarTextButton(text = "H4") { viewModel.insertHeading(4) }
-        ToolbarTextButton(text = "H5") { viewModel.insertHeading(5) }
-        ToolbarTextButton(text = "H6") { viewModel.insertHeading(6) }
-        ToolbarDivider()
-        ToolbarIconButton(icon = Icons.Default.FormatSize, label = "字号") { viewModel.showFontSizePicker() }
-        ToolbarIconButton(icon = Icons.Default.ColorLens, label = "文字颜色") {
-            viewModel.showColorPicker(ColorPickerTarget.TEXT)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Row 1: inline text formatting
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ToolbarIconButton(icon = Icons.Default.FormatBold, label = "粗体") { viewModel.toggleBold() }
+            ToolbarIconButton(icon = Icons.Default.FormatItalic, label = "斜体") { viewModel.toggleItalic() }
+            ToolbarIconButton(icon = Icons.Default.FormatUnderlined, label = "下划线") { viewModel.toggleUnderline() }
+            ToolbarIconButton(icon = Icons.Default.FormatStrikethrough, label = "删除线") { viewModel.toggleStrikethrough() }
+            ToolbarDivider()
+            ToolbarIconButton(icon = Icons.Default.FormatSize, label = "字号") { viewModel.showFontSizePicker() }
+            ToolbarIconButton(icon = Icons.Default.ColorLens, label = "文字颜色") {
+                viewModel.showColorPicker(ColorPickerTarget.TEXT)
+            }
+            ToolbarIconButton(icon = Icons.Default.Palette, label = "背景颜色") {
+                viewModel.showColorPicker(ColorPickerTarget.BACKGROUND)
+            }
         }
-        ToolbarIconButton(icon = Icons.Default.Palette, label = "背景颜色") {
-            viewModel.showColorPicker(ColorPickerTarget.BACKGROUND)
+
+        androidx.compose.material3.HorizontalDivider(
+            color = androidx.compose.material3.MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+
+        // Row 2: heading insert + style picker
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HeadingButtonWithStyle(label = "H1", onInsert = { viewModel.insertHeading(1) }, onStyle = { viewModel.showHeadingStyleDialog(1) })
+            HeadingButtonWithStyle(label = "H2", onInsert = { viewModel.insertHeading(2) }, onStyle = { viewModel.showHeadingStyleDialog(2) })
+            HeadingButtonWithStyle(label = "H3", onInsert = { viewModel.insertHeading(3) }, onStyle = { viewModel.showHeadingStyleDialog(3) })
+            ToolbarTextButton(text = "H4") { viewModel.insertHeading(4) }
+            ToolbarTextButton(text = "H5") { viewModel.insertHeading(5) }
+            ToolbarTextButton(text = "H6") { viewModel.insertHeading(6) }
         }
     }
 }
 
 @Composable
 private fun ParagraphTab(viewModel: EditorViewModel) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        ToolbarIconButton(icon = Icons.AutoMirrored.Filled.FormatAlignLeft, label = "左对齐") {
-            viewModel.applyAlignment(TextAlignment.LEFT)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Row 1: alignment + list + block elements
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ToolbarIconButton(icon = Icons.AutoMirrored.Filled.FormatAlignLeft, label = "左对齐") {
+                viewModel.applyAlignment(TextAlignment.LEFT)
+            }
+            ToolbarIconButton(icon = Icons.Default.FormatAlignCenter, label = "居中") {
+                viewModel.applyAlignment(TextAlignment.CENTER)
+            }
+            ToolbarIconButton(icon = Icons.AutoMirrored.Filled.FormatAlignRight, label = "右对齐") {
+                viewModel.applyAlignment(TextAlignment.RIGHT)
+            }
+            ToolbarDivider()
+            ToolbarIconButton(icon = Icons.AutoMirrored.Filled.FormatListBulleted, label = "无序列表") {
+                viewModel.insertBulletList()
+            }
+            ToolbarIconButton(icon = Icons.Default.FormatListNumbered, label = "有序列表") {
+                viewModel.insertOrderedList()
+            }
+            ToolbarDivider()
+            ToolbarIconButton(icon = Icons.Default.FormatQuote, label = "引用") {
+                viewModel.insertQuote()
+            }
+            ToolbarIconButton(icon = Icons.Default.HorizontalRule, label = "分割线") {
+                viewModel.insertHorizontalRule()
+            }
         }
-        ToolbarIconButton(icon = Icons.Default.FormatAlignCenter, label = "居中") {
-            viewModel.applyAlignment(TextAlignment.CENTER)
-        }
-        ToolbarIconButton(icon = Icons.AutoMirrored.Filled.FormatAlignRight, label = "右对齐") {
-            viewModel.applyAlignment(TextAlignment.RIGHT)
-        }
-        ToolbarDivider()
-        ToolbarIconButton(icon = Icons.AutoMirrored.Filled.FormatListBulleted, label = "无序列表") {
-            viewModel.insertBulletList()
-        }
-        ToolbarIconButton(icon = Icons.Default.FormatListNumbered, label = "有序列表") {
-            viewModel.insertOrderedList()
-        }
-        ToolbarDivider()
-        ToolbarIconButton(icon = Icons.Default.FormatQuote, label = "引用") {
-            viewModel.insertQuote()
-        }
-        ToolbarIconButton(icon = Icons.Default.HorizontalRule, label = "分割线") {
-            viewModel.insertHorizontalRule()
+
+        androidx.compose.material3.HorizontalDivider(
+            color = androidx.compose.material3.MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+
+        // Row 2: paragraph-level settings
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ToolbarIconButton(icon = Icons.Default.FormatLineSpacing, label = "行间距") {
+                viewModel.showParagraphSettingsDialog()
+            }
+            ToolbarIconButton(icon = Icons.Default.Tune, label = "段落设置") {
+                viewModel.showParagraphSettingsDialog()
+            }
+            ToolbarDivider()
+            // Quick line height shortcuts
+            listOf(1.5f to "1.5", 1.75f to "1.75", 2.0f to "2.0").forEach { (value, label) ->
+                ToolbarTextButton(text = label) { viewModel.applyLineHeight(value) }
+            }
         }
     }
 }
@@ -299,4 +349,53 @@ fun ToolbarDivider() {
             .height(28.dp)
             .background(MaterialTheme.colorScheme.outline)
     )
+}
+
+/**
+ * A compound heading button: tapping the label inserts the heading markdown,
+ * tapping the small dropdown indicator opens the heading style picker.
+ */
+@Composable
+fun HeadingButtonWithStyle(
+    label: String,
+    onInsert: () -> Unit,
+    onStyle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .height(40.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Insert area
+        Box(
+            modifier = Modifier
+                .clickable(onClick = onInsert)
+                .padding(start = 10.dp, end = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        // Thin separator
+        Box(modifier = Modifier.width(1.dp).height(24.dp).background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)))
+        // Style selector area (small dropdown indicator)
+        Box(
+            modifier = Modifier
+                .clickable(onClick = onStyle)
+                .padding(horizontal = 5.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "▾",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+    }
 }
