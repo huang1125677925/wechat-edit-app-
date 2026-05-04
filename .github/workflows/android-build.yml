@@ -1,0 +1,256 @@
+name: Android Build & Release
+
+on:
+  push:
+    branches:
+      - main
+      - 'cursor/**'
+      - 'feature/**'
+      - 'release/**'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type (debug or release)'
+        required: false
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Job 1: Lint & Unit Tests ─────────────────────────────────────────────────
+  test:
+    name: Lint & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run lint
+        run: ./gradlew lint --stacktrace
+
+      - name: Run unit tests
+        run: ./gradlew test --stacktrace
+
+      - name: Upload lint results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-results
+          path: app/build/reports/lint-results*.html
+          retention-days: 7
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: app/build/reports/tests/
+          retention-days: 7
+
+  # ── Job 2: Build Debug APK ──────────────────────────────────────────────────
+  build-debug:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Rename APK with commit SHA
+        run: |
+          mkdir -p artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             artifacts/WeChatEditor-debug-${{ github.sha }}.apk
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk-${{ github.sha }}
+          path: artifacts/WeChatEditor-debug-${{ github.sha }}.apk
+          retention-days: 30
+
+  # ── Job 3: Build Release APK (tag-triggered or manual) ──────────────────────
+  build-release:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Decode Keystore (if secrets available)
+        id: decode_keystore
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > app/release.keystore
+          echo "keystore_exists=true" >> $GITHUB_OUTPUT
+
+      - name: Build Release APK (signed)
+        if: steps.decode_keystore.outputs.keystore_exists == 'true'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/app/release.keystore \
+            -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$KEY_PASSWORD \
+            --stacktrace
+
+      - name: Build Release APK (debug-signed fallback)
+        if: steps.decode_keystore.outputs.keystore_exists != 'true'
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Get version name
+        id: get_version
+        run: |
+          VERSION=$(grep 'versionName' app/build.gradle.kts | sed 's/.*versionName = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Rename Release APK
+        run: |
+          mkdir -p artifacts
+          cp app/build/outputs/apk/release/app-release*.apk \
+             artifacts/WeChatEditor-${{ steps.get_version.outputs.version }}.apk || \
+          cp app/build/outputs/apk/release/app-release-unsigned.apk \
+             artifacts/WeChatEditor-${{ steps.get_version.outputs.version }}.apk
+
+      - name: Upload Release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk-${{ steps.get_version.outputs.version }}
+          path: artifacts/WeChatEditor-${{ steps.get_version.outputs.version }}.apk
+          retention-days: 90
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "微信公众号编辑器 ${{ steps.get_version.outputs.tag }}"
+          body: |
+            ## 微信公众号编辑器 ${{ steps.get_version.outputs.tag }}
+
+            ### 功能特性
+            - 📝 Markdown 语法支持的富文本编辑器
+            - 🎨 6种专业排版模板（优雅文艺、科技简约、商务专业等）
+            - 👁️ 实时HTML预览
+            - 📋 一键复制HTML代码
+            - 🔤 字体、颜色、对齐、行距等精细排版控制
+            - 📱 Material Design 3 现代界面
+
+            ### 下载安装
+            下载下方的 APK 文件，允许安装未知来源应用后直接安装。
+
+            ### 更新日志
+            ${{ github.event.release.body }}
+          files: |
+            artifacts/WeChatEditor-${{ steps.get_version.outputs.version }}.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Job 4: Build Summary ─────────────────────────────────────────────────────
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [test, build-debug]
+    if: always() && (github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')))
+    steps:
+      - name: Build Summary
+        run: |
+          echo "## 构建摘要" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 步骤 | 状态 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint & 单元测试 | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Debug APK 构建 | ${{ needs.build-debug.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**提交**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**分支**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> Debug APK 已上传为 Artifact，保留 30 天。" >> $GITHUB_STEP_SUMMARY
+          echo "> 如需发布正式版本，请推送 \`v*\` 格式的 tag。" >> $GITHUB_STEP_SUMMARY
