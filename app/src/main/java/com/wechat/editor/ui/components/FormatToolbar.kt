@@ -125,6 +125,9 @@ private fun FormatTab(viewModel: EditorViewModel) {
         ToolbarTextButton(text = "H1") { viewModel.insertHeading(1) }
         ToolbarTextButton(text = "H2") { viewModel.insertHeading(2) }
         ToolbarTextButton(text = "H3") { viewModel.insertHeading(3) }
+        ToolbarTextButton(text = "H4") { viewModel.insertHeading(4) }
+        ToolbarTextButton(text = "H5") { viewModel.insertHeading(5) }
+        ToolbarTextButton(text = "H6") { viewModel.insertHeading(6) }
         ToolbarDivider()
         ToolbarIconButton(icon = Icons.Default.FormatSize, label = "字号") { viewModel.showFontSizePicker() }
         ToolbarIconButton(icon = Icons.Default.ColorLens, label = "文字颜色") {
@@ -186,7 +189,7 @@ private fun InsertTab(viewModel: EditorViewModel) {
             viewModel.showLinkDialog()
         }
         ToolbarIconButton(icon = Icons.Default.Image, label = "图片") {
-            // Image insertion - would need image picker in full implementation
+            viewModel.showImageDialog()
         }
         ToolbarIconButton(icon = Icons.Default.Code, label = "代码块") {
             viewModel.insertCodeBlock()

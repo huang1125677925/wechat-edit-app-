@@ -100,9 +100,60 @@ object HtmlGenerator {
                 margin-bottom: ${layout.paragraphSpacing}px;
                 text-align: justify;
             }
-            h1 { font-size: ${layout.h1Size}px; color: ${layout.primaryColor}; margin: 24px 0 12px; font-weight: bold; }
-            h2 { font-size: ${layout.h2Size}px; color: ${layout.primaryColor}; margin: 20px 0 10px; font-weight: bold; }
-            h3 { font-size: ${layout.h3Size}px; color: ${layout.textColor}; margin: 16px 0 8px; font-weight: bold; }
+            h1 {
+                font-size: ${layout.h1Size}px;
+                color: ${layout.primaryColor};
+                margin: 28px 0 14px;
+                font-weight: bold;
+                padding-bottom: 8px;
+                border-bottom: 3px solid ${layout.primaryColor};
+                line-height: 1.35;
+            }
+            h2 {
+                font-size: ${layout.h2Size}px;
+                color: ${layout.primaryColor};
+                margin: 22px 0 10px;
+                font-weight: bold;
+                padding-left: 10px;
+                border-left: 4px solid ${layout.primaryColor};
+                line-height: 1.4;
+            }
+            h3 {
+                font-size: ${layout.h3Size}px;
+                color: ${layout.textColor};
+                margin: 18px 0 8px;
+                font-weight: bold;
+                padding-left: 6px;
+                border-left: 3px solid ${layout.subtitleColor};
+                line-height: 1.4;
+            }
+            h4 {
+                font-size: ${layout.h3Size - 2}px;
+                color: ${layout.textColor};
+                margin: 14px 0 6px;
+                font-weight: bold;
+                padding: 4px 10px;
+                background-color: rgba(0,0,0,0.04);
+                border-radius: 4px;
+                line-height: 1.4;
+            }
+            h5 {
+                font-size: ${layout.baseFontSize + 1}px;
+                color: ${layout.subtitleColor};
+                margin: 12px 0 4px;
+                font-weight: bold;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                line-height: 1.4;
+            }
+            h6 {
+                font-size: ${layout.baseFontSize}px;
+                color: ${layout.subtitleColor};
+                margin: 10px 0 4px;
+                font-weight: bold;
+                font-style: italic;
+                line-height: 1.4;
+            }
             strong { font-weight: bold; color: ${layout.textColor}; }
             em { font-style: italic; }
             u { text-decoration: underline; }
