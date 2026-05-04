@@ -5,6 +5,7 @@ import com.wechat.editor.model.H1Style
 import com.wechat.editor.model.H2Style
 import com.wechat.editor.model.H3Style
 import com.wechat.editor.model.LayoutSettings
+import com.wechat.editor.model.PreviewStylePresets
 import com.wechat.editor.model.QuoteStyle
 
 object HtmlGenerator {
@@ -48,8 +49,7 @@ object HtmlGenerator {
     fun generateWeChatPasteHtml(markdownContent: String, layout: LayoutSettings, title: String, author: String): String {
         val bodyContent = convertMarkdownToHtml(markdownContent)
         val styledBody = applyWeChatInlineStyles(bodyContent, layout)
-        val ff =
-            "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
+        val ff = PreviewStylePresets.bodyFontStack(layout.fontFamily).replace("\"", "'")
         val titleBlock = if (title.isNotBlank()) {
             """<h1 style="font-size:${layout.h1Size}px;font-weight:bold;color:${layout.textColor};margin:0 0 8px;line-height:1.4;">${escapeHtml(title)}</h1>"""
         } else ""
@@ -186,11 +186,12 @@ object HtmlGenerator {
             CodeStyle.GITHUB -> "background:#f6f8fa;color:#24292e;"
         }
 
+        val bodyFf = PreviewStylePresets.bodyFontStack(layout.fontFamily)
+        val extra = layout.extraPreviewCss.trim().let { if (it.isNotEmpty()) "\n$it" else "" }
         return """
             * { box-sizing: border-box; margin: 0; padding: 0; }
             body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-                             'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+                font-family: $bodyFf;
                 background-color: ${layout.backgroundColor};
                 color: ${layout.textColor};
                 font-size: ${layout.baseFontSize}px;
@@ -309,6 +310,7 @@ object HtmlGenerator {
             }
             th { background-color: #f5f5f5; font-weight: bold; }
             tr:nth-child(even) { background-color: #fafafa; }
+            $extra
         """.trimIndent()
     }
 

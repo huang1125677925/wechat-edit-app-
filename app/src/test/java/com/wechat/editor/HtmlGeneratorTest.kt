@@ -52,6 +52,13 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `generateCss appends extraPreviewCss`() {
+        val layout = defaultLayout.copy(extraPreviewCss = ".article-content p { color: red; }")
+        val css = HtmlGenerator.generateCss(layout)
+        assertTrue(css.contains(".article-content p { color: red; }"))
+    }
+
+    @Test
     fun `generateWeChatPasteHtml is fragment with inline styles only`() {
         val html = HtmlGenerator.generateWeChatPasteHtml(
             "正文一段",
