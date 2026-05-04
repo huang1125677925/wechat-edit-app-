@@ -1,0 +1,274 @@
+package com.wechat.editor.utils
+
+import com.wechat.editor.model.CodeStyle
+import com.wechat.editor.model.LayoutSettings
+import com.wechat.editor.model.QuoteStyle
+
+object HtmlGenerator {
+
+    fun generateHtml(markdownContent: String, layout: LayoutSettings, title: String, author: String): String {
+        val bodyContent = convertMarkdownToHtml(markdownContent)
+        val css = generateCss(layout)
+        val titleHtml = if (title.isNotBlank()) {
+            "<h1 class=\"article-title\">$title</h1>"
+        } else ""
+        val authorHtml = if (author.isNotBlank()) {
+            "<p class=\"article-author\">作者：$author</p>"
+        } else ""
+
+        return """
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${escapeHtml(title)}</title>
+    <style>$css</style>
+</head>
+<body>
+    <div class="article-container">
+        $titleHtml
+        $authorHtml
+        <div class="article-content">
+            $bodyContent
+        </div>
+    </div>
+</body>
+</html>
+        """.trimIndent()
+    }
+
+    fun generateCss(layout: LayoutSettings): String {
+        val quoteStyle = when (layout.quoteStyle) {
+            QuoteStyle.LEFT_BORDER -> """
+                border-left: 4px solid ${layout.primaryColor};
+                padding: 8px 16px;
+                background-color: #f9f9f9;
+                color: ${layout.subtitleColor};
+            """
+            QuoteStyle.BACKGROUND -> """
+                background-color: #f0f7f0;
+                border-left: none;
+                padding: 12px 16px;
+                border-radius: 4px;
+                color: ${layout.textColor};
+            """
+            QuoteStyle.ITALIC -> """
+                font-style: italic;
+                padding: 8px 16px;
+                color: ${layout.subtitleColor};
+                border: none;
+            """
+        }
+
+        val codeStyle = when (layout.codeStyle) {
+            CodeStyle.DARK -> "background:#282c34;color:#abb2bf;"
+            CodeStyle.LIGHT -> "background:#f5f5f5;color:#333;"
+            CodeStyle.GITHUB -> "background:#f6f8fa;color:#24292e;"
+        }
+
+        return """
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+                             'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+                background-color: ${layout.backgroundColor};
+                color: ${layout.textColor};
+                font-size: ${layout.baseFontSize}px;
+                line-height: ${layout.lineHeight};
+            }
+            .article-container {
+                max-width: ${layout.contentMaxWidth}px;
+                margin: 0 auto;
+                padding: 20px 16px 40px;
+            }
+            .article-title {
+                font-size: ${layout.h1Size}px;
+                font-weight: bold;
+                color: ${layout.textColor};
+                margin-bottom: 8px;
+                line-height: 1.4;
+            }
+            .article-author {
+                font-size: 14px;
+                color: ${layout.subtitleColor};
+                margin-bottom: 20px;
+                padding-bottom: 16px;
+                border-bottom: 1px solid #eee;
+            }
+            .article-content p {
+                margin-bottom: ${layout.paragraphSpacing}px;
+                text-align: justify;
+            }
+            h1 { font-size: ${layout.h1Size}px; color: ${layout.primaryColor}; margin: 24px 0 12px; font-weight: bold; }
+            h2 { font-size: ${layout.h2Size}px; color: ${layout.primaryColor}; margin: 20px 0 10px; font-weight: bold; }
+            h3 { font-size: ${layout.h3Size}px; color: ${layout.textColor}; margin: 16px 0 8px; font-weight: bold; }
+            strong { font-weight: bold; color: ${layout.textColor}; }
+            em { font-style: italic; }
+            u { text-decoration: underline; }
+            del { text-decoration: line-through; color: ${layout.subtitleColor}; }
+            a { color: ${layout.primaryColor}; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+            blockquote {
+                margin: 16px 0;
+                $quoteStyle
+            }
+            pre {
+                margin: 16px 0;
+                border-radius: 6px;
+                overflow-x: auto;
+                $codeStyle
+            }
+            pre code {
+                display: block;
+                padding: 16px;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 14px;
+                line-height: 1.5;
+                background: transparent;
+            }
+            code {
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 14px;
+                background: #f0f0f0;
+                color: #e74c3c;
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+            ul, ol { margin: 8px 0 ${layout.paragraphSpacing}px 24px; }
+            li { margin-bottom: 6px; }
+            hr {
+                border: none;
+                border-top: 1px solid #eee;
+                margin: 24px 0;
+            }
+            img {
+                max-width: 100%;
+                height: auto;
+                border-radius: 4px;
+                display: block;
+                margin: 16px auto;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 16px 0;
+                font-size: 14px;
+            }
+            th, td {
+                border: 1px solid #e0e0e0;
+                padding: 8px 12px;
+                text-align: left;
+            }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            tr:nth-child(even) { background-color: #fafafa; }
+        """.trimIndent()
+    }
+
+    fun convertMarkdownToHtml(markdown: String): String {
+        var html = escapeHtml(markdown)
+
+        // Code blocks (before inline code)
+        html = html.replace(Regex("```(\\w*)\\n([\\s\\S]*?)```")) { match ->
+            val lang = match.groupValues[1]
+            val code = match.groupValues[2].trimEnd()
+            if (lang.isNotEmpty()) {
+                "<pre><code class=\"language-$lang\">$code</code></pre>"
+            } else {
+                "<pre><code>$code</code></pre>"
+            }
+        }
+
+        // Headings
+        html = html.replace(Regex("^#{6}\\s+(.+)$", RegexOption.MULTILINE), "<h6>$1</h6>")
+        html = html.replace(Regex("^#{5}\\s+(.+)$", RegexOption.MULTILINE), "<h5>$1</h5>")
+        html = html.replace(Regex("^#{4}\\s+(.+)$", RegexOption.MULTILINE), "<h4>$1</h4>")
+        html = html.replace(Regex("^###\\s+(.+)$", RegexOption.MULTILINE), "<h3>$1</h3>")
+        html = html.replace(Regex("^##\\s+(.+)$", RegexOption.MULTILINE), "<h2>$1</h2>")
+        html = html.replace(Regex("^#\\s+(.+)$", RegexOption.MULTILINE), "<h1>$1</h1>")
+
+        // Bold and italic
+        html = html.replace(Regex("\\*\\*\\*(.+?)\\*\\*\\*"), "<strong><em>$1</em></strong>")
+        html = html.replace(Regex("\\*\\*(.+?)\\*\\*"), "<strong>$1</strong>")
+        html = html.replace(Regex("\\*(.+?)\\*"), "<em>$1</em>")
+        html = html.replace(Regex("__(.+?)__"), "<strong>$1</strong>")
+        html = html.replace(Regex("_(.+?)_"), "<em>$1</em>")
+
+        // Strikethrough
+        html = html.replace(Regex("~~(.+?)~~"), "<del>$1</del>")
+
+        // Inline code
+        html = html.replace(Regex("`([^`]+)`"), "<code>$1</code>")
+
+        // Links
+        html = html.replace(Regex("!\\[([^\\]]*)]\\(([^)]+)\\)")) { match ->
+            val alt = match.groupValues[1]
+            val src = match.groupValues[2]
+            "<img src=\"$src\" alt=\"$alt\" />"
+        }
+        html = html.replace(Regex("\\[([^\\]]+)]\\(([^)]+)\\)")) { match ->
+            val text = match.groupValues[1]
+            val href = match.groupValues[2]
+            "<a href=\"$href\">$text</a>"
+        }
+
+        // Horizontal rule
+        html = html.replace(Regex("^(---|-{3,}|\\*{3,}|_{3,})$", RegexOption.MULTILINE), "<hr>")
+
+        // Blockquote
+        html = html.replace(Regex("^>\\s*(.+)$", RegexOption.MULTILINE), "<blockquote>$1</blockquote>")
+
+        // Unordered lists
+        html = html.replace(Regex("((?:^[*\\-+]\\s.+\\n?)+)", RegexOption.MULTILINE)) { match ->
+            val items = match.value.trim().split("\n").joinToString("") { line ->
+                "<li>${line.trimStart('*', '-', '+').trim()}</li>"
+            }
+            "<ul>$items</ul>"
+        }
+
+        // Ordered lists
+        html = html.replace(Regex("((?:^\\d+\\.\\s.+\\n?)+)", RegexOption.MULTILINE)) { match ->
+            val items = match.value.trim().split("\n").joinToString("") { line ->
+                "<li>${line.replace(Regex("^\\d+\\.\\s"), "")}</li>"
+            }
+            "<ol>$items</ol>"
+        }
+
+        // Paragraphs (wrap non-tagged lines)
+        val lines = html.split("\n")
+        val result = StringBuilder()
+        var inBlock = false
+        val blockTags = setOf("h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "pre", "hr", "img", "p")
+
+        for (line in lines) {
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) {
+                if (!inBlock) result.append("")
+                continue
+            }
+            val isBlockElement = blockTags.any { tag ->
+                trimmed.startsWith("<$tag") || trimmed.startsWith("</$tag")
+            }
+            if (isBlockElement) {
+                result.append(trimmed).append("\n")
+            } else {
+                result.append("<p>").append(trimmed).append("</p>\n")
+            }
+        }
+
+        return result.toString()
+    }
+
+    private fun escapeHtml(text: String): String {
+        // Preserve existing HTML tags while escaping bare special chars
+        // Only escape & that's not part of an entity, and < > that are not part of known HTML tags
+        return text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            // Restore HTML tags we want to pass through
+            .replace(Regex("&lt;(/?(?:u|b|i|span|p|div|br|img|a|strong|em|del|code|pre|h[1-6]|ul|ol|li|blockquote|hr|table|tr|th|td)[^>]*)&gt;")) {
+                "<${it.groupValues[1]}>"
+            }
+    }
+}

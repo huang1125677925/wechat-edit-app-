@@ -1,0 +1,21 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+app/release.keystore
+
+# APK files (not tracked in git, produced by CI)
+*.apk
+*.aab
+
+# Build output
+app/build/
+
+# Kotlin
+*.class
