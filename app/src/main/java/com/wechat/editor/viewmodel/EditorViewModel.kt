@@ -20,8 +20,11 @@ import com.wechat.editor.model.LayoutSettings
 import com.wechat.editor.model.QuoteStyle
 import com.wechat.editor.model.TextAlignment
 import com.wechat.editor.model.TextStyle
+import com.wechat.editor.data.ArticleDraftStore
 import com.wechat.editor.utils.ImgurLaApi
 import com.wechat.editor.utils.HtmlGenerator
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +32,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class EditorViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val draftStore = ArticleDraftStore(application)
+    private var editorSessionKey: String? = null
+    private var autoSaveJob: Job? = null
 
     private val _article = MutableStateFlow(Article())
     val article: StateFlow<Article> = _article.asStateFlow()
@@ -54,12 +61,60 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     private val undoStack = ArrayDeque<TextFieldValue>()
     private val redoStack = ArrayDeque<TextFieldValue>()
 
+    companion object {
+        private const val AUTO_SAVE_DEBOUNCE_MS = 1_800L
+    }
+
+    /**
+     * Call when the editor screen is shown for [sessionKey] (`"new"` or an existing article id).
+     * Restores a local draft when it likely contains newer edits than the in-memory article.
+     */
+    fun onEditorSessionStarted(sessionKey: String) {
+        editorSessionKey = sessionKey
+        val draft = draftStore.readDraft(sessionKey) ?: return
+        val meaningful = draft.title.isNotBlank() || draft.content.isNotBlank() || draft.author.isNotBlank()
+        if (!meaningful) return
+        if (sessionKey == "new") {
+            loadArticle(draft)
+            return
+        }
+        if (draft.updatedAt > _article.value.updatedAt) {
+            loadArticle(draft)
+        }
+    }
+
+    private fun scheduleAutoSave() {
+        val key = editorSessionKey ?: return
+        autoSaveJob?.cancel()
+        autoSaveJob = viewModelScope.launch {
+            delay(AUTO_SAVE_DEBOUNCE_MS)
+            val snapshot = buildArticleSnapshot()
+            if (snapshot.title.isBlank() && snapshot.content.isBlank() && snapshot.author.isBlank()) {
+                return@launch
+            }
+            draftStore.writeDraft(key, snapshot)
+            _editorState.update { it.copy(lastAutoSavedAtEpochMs = System.currentTimeMillis()) }
+        }
+    }
+
+    private fun buildArticleSnapshot(): Article {
+        return _article.value.copy(
+            title = _titleValue.value.text,
+            content = _contentValue.value.text,
+            author = _authorValue.value.text,
+            layoutSettings = _layoutSettings.value,
+            htmlContent = getHtmlContent(),
+            updatedAt = System.currentTimeMillis()
+        )
+    }
+
     fun loadArticle(article: Article) {
         _article.value = article
         _titleValue.value = TextFieldValue(article.title)
         _contentValue.value = TextFieldValue(article.content)
         _authorValue.value = TextFieldValue(article.author)
         _layoutSettings.value = article.layoutSettings
+        _editorState.update { it.copy(lastAutoSavedAtEpochMs = null) }
     }
 
     fun loadNewArticle() {
@@ -71,11 +126,13 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         _layoutSettings.value = LayoutSettings()
         undoStack.clear()
         redoStack.clear()
+        _editorState.update { it.copy(lastAutoSavedAtEpochMs = null) }
     }
 
     fun updateTitle(value: TextFieldValue) {
         _titleValue.value = value
         _article.update { it.copy(title = value.text) }
+        scheduleAutoSave()
     }
 
     fun updateContent(value: TextFieldValue) {
@@ -98,11 +155,13 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 wordCount = value.text.length
             )
         }
+        scheduleAutoSave()
     }
 
     fun updateAuthor(value: TextFieldValue) {
         _authorValue.value = value
         _article.update { it.copy(author = value.text) }
+        scheduleAutoSave()
     }
 
     fun undo() {
@@ -114,6 +173,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             _editorState.update {
                 it.copy(canUndo = undoStack.isNotEmpty(), canRedo = redoStack.isNotEmpty())
             }
+            scheduleAutoSave()
         }
     }
 
@@ -126,6 +186,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             _editorState.update {
                 it.copy(canUndo = undoStack.isNotEmpty(), canRedo = redoStack.isNotEmpty())
             }
+            scheduleAutoSave()
         }
     }
 
@@ -240,6 +301,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         _layoutSettings.update { getLayoutForTemplate(template) }
         dismissTemplateDialog()
         _snackbarMessage.value = "已应用模板：${template.displayName}"
+        scheduleAutoSave()
     }
 
     private fun getLayoutForTemplate(template: ArticleTemplate): LayoutSettings {
@@ -289,6 +351,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     fun updateLayoutSettings(settings: LayoutSettings) {
         _layoutSettings.value = settings
         _article.update { it.copy(layoutSettings = settings) }
+        scheduleAutoSave()
     }
 
     fun getHtmlContent(): String {
@@ -320,6 +383,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             updatedAt = System.currentTimeMillis()
         )
         _article.value = saved
+        editorSessionKey?.let { draftStore.clearDraft(it) }
         _snackbarMessage.value = "文章已保存"
         return saved
     }
@@ -392,6 +456,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
         dismissHeadingStyleDialog()
         _snackbarMessage.value = "已应用H1样式：${style.displayName}"
+        scheduleAutoSave()
     }
 
     fun applyH2Style(style: H2Style) {
@@ -406,6 +471,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
         dismissHeadingStyleDialog()
         _snackbarMessage.value = "已应用H2样式：${style.displayName}"
+        scheduleAutoSave()
     }
 
     fun applyH3Style(style: H3Style) {
@@ -420,6 +486,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
         dismissHeadingStyleDialog()
         _snackbarMessage.value = "已应用H3样式：${style.displayName}"
+        scheduleAutoSave()
     }
 
     fun showParagraphSettingsDialog() {
@@ -440,6 +507,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 )
             )
         }
+        scheduleAutoSave()
     }
 
     fun applyParagraphSpacing(spacing: Int) {
@@ -452,6 +520,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 )
             )
         }
+        scheduleAutoSave()
     }
 
     fun toggleFirstLineIndent() {
@@ -464,6 +533,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 )
             )
         }
+        scheduleAutoSave()
     }
 
     fun showSnackbar(message: String) {

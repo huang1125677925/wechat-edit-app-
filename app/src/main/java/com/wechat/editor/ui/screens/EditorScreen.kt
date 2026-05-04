@@ -58,6 +58,9 @@ import com.wechat.editor.ui.components.ParagraphSettingsDialog
 import com.wechat.editor.ui.components.TemplateDialog
 import com.wechat.editor.utils.ClipboardUtils
 import com.wechat.editor.viewmodel.EditorViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,12 +101,25 @@ fun EditorScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = if (titleValue.text.isBlank()) "新建文章" else titleValue.text,
-                        maxLines = 1,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 17.sp
-                    )
+                    Column {
+                        Text(
+                            text = if (titleValue.text.isBlank()) "新建文章" else titleValue.text,
+                            maxLines = 1,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 17.sp
+                        )
+                        val savedAt = editorState.lastAutoSavedAtEpochMs
+                        if (savedAt != null) {
+                            val timeStr = remember(savedAt) {
+                                SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(savedAt))
+                            }
+                            Text(
+                                text = "已自动保存 $timeStr",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
