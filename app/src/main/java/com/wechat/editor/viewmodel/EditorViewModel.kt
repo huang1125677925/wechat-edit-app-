@@ -21,6 +21,8 @@ import com.wechat.editor.model.QuoteStyle
 import com.wechat.editor.model.TextAlignment
 import com.wechat.editor.model.TextStyle
 import com.wechat.editor.data.ArticleDraftStore
+import com.wechat.editor.data.UserSettingsStore
+import com.wechat.editor.utils.DeepSeekApi
 import com.wechat.editor.utils.ImgurLaApi
 import com.wechat.editor.utils.HtmlGenerator
 import kotlinx.coroutines.Job
@@ -34,6 +36,7 @@ import kotlinx.coroutines.launch
 class EditorViewModel(application: Application) : AndroidViewModel(application) {
 
     private val draftStore = ArticleDraftStore(application)
+    private val userSettingsStore = UserSettingsStore(application)
     private var editorSessionKey: String? = null
     private var autoSaveJob: Job? = null
 
@@ -542,6 +545,38 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun clearSnackbar() {
         _snackbarMessage.value = null
+    }
+
+    /**
+     * Calls DeepSeek V4 (user API key from [UserSettingsStore]) to polish Markdown layout and wording.
+     */
+    fun polishContentWithDeepSeek() {
+        if (_editorState.value.isDeepSeekPolishing) return
+        val apiKey = userSettingsStore.getDeepSeekApiKey()
+        if (apiKey.isBlank()) {
+            _snackbarMessage.value = "请先在文章列表右上角设置中填写 DeepSeek API Key"
+            return
+        }
+        viewModelScope.launch {
+            _editorState.update { it.copy(isDeepSeekPolishing = true) }
+            when (
+                val result = DeepSeekApi.polishArticleMarkdown(
+                    apiKey = apiKey,
+                    title = _titleValue.value.text,
+                    author = _authorValue.value.text,
+                    bodyMarkdown = _contentValue.value.text
+                )
+            ) {
+                is DeepSeekApi.Result.Success -> {
+                    updateContent(TextFieldValue(result.markdown))
+                    _snackbarMessage.value = "DeepSeek 已优化正文排版"
+                }
+                is DeepSeekApi.Result.Error -> {
+                    _snackbarMessage.value = "DeepSeek：${result.message}"
+                }
+            }
+            _editorState.update { it.copy(isDeepSeekPolishing = false) }
+        }
     }
 
     // ── imgur.la upload ───────────────────────────────────────────────────────

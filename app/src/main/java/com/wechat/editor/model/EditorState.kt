@@ -20,6 +20,7 @@ data class EditorState(
     val showTemplateDialog: Boolean = false,
     val isUploadingImage: Boolean = false,
     val uploadProgress: String = "",
+    val isDeepSeekPolishing: Boolean = false,
     /** Wall-clock time of the last successful background draft persist, or null if none yet. */
     val lastAutoSavedAtEpochMs: Long? = null
 )

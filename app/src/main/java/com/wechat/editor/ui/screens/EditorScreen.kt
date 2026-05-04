@@ -300,6 +300,7 @@ fun EditorScreen(
                 FormatToolbar(
                     viewModel = viewModel,
                     selectedTab = editorState.selectedTab,
+                    isDeepSeekBusy = editorState.isDeepSeekPolishing,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
