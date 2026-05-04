@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.sp
 /**
  * Dialog for inserting images. Provides two tabs:
  *  1. URL – paste an external URL directly.
- *  2. 上传 – pick a local image and upload to img.remit.ee (no token required).
+ *  2. 上传 – pick a local image and upload to imgur.la (API key from service docs).
  */
 @Composable
 fun ImageInsertDialog(
@@ -116,7 +116,7 @@ private fun UrlInsertTab(onInsert: (altText: String, url: String) -> Unit) {
             value = url,
             onValueChange = { url = it },
             label = { Text("图片 URL *") },
-            placeholder = { Text("https://img.remit.ee/…") },
+            placeholder = { Text("https://www.imgur.la/…") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             leadingIcon = {
@@ -183,7 +183,7 @@ private fun UploadTab(
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "上传至 img.remit.ee，无需注册，单文件最大 20MB，支持 JPG/PNG/GIF/WebP 等格式。",
+            text = "上传至 imgur.la，单文件最大约 10MB，支持 JPG/PNG/GIF/WebP 等格式（详见图床说明）。",
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
             lineHeight = 17.sp

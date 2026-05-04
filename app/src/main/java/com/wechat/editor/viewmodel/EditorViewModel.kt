@@ -17,7 +17,7 @@ import com.wechat.editor.model.LayoutSettings
 import com.wechat.editor.model.QuoteStyle
 import com.wechat.editor.model.TextAlignment
 import com.wechat.editor.model.TextStyle
-import com.wechat.editor.utils.RemiteeApi
+import com.wechat.editor.utils.ImgurLaApi
 import com.wechat.editor.utils.HtmlGenerator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -363,10 +363,10 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         _snackbarMessage.value = null
     }
 
-    // ── img.remit.ee upload ───────────────────────────────────────────────────
+    // ── imgur.la upload ───────────────────────────────────────────────────────
 
     /**
-     * Upload an image selected from the gallery (via [uri]) to img.remit.ee and
+     * Upload an image selected from the gallery (via [uri]) to imgur.la and
      * insert the resulting Markdown image link into the editor content.
      */
     fun uploadImageFromUri(uri: Uri, altText: String = "图片") {
@@ -385,12 +385,12 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                         return@launch
                     }
 
-                when (val result = RemiteeApi.uploadImage(bytes, filename, mimeType)) {
-                    is RemiteeApi.Result.Success -> {
+                when (val result = ImgurLaApi.uploadImage(bytes, filename, mimeType)) {
+                    is ImgurLaApi.Result.Success -> {
                         insertImageMarkdown(altText, result.data.url)
                         _snackbarMessage.value = "图片上传成功"
                     }
-                    is RemiteeApi.Result.Error -> {
+                    is ImgurLaApi.Result.Error -> {
                         _snackbarMessage.value = "上传失败：${result.message}"
                         _editorState.update { it.copy(isUploadingImage = false, uploadProgress = "") }
                     }
