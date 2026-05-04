@@ -38,6 +38,133 @@ object HtmlGenerator {
         """.trimIndent()
     }
 
+    /**
+     * HTML fragment for pasting into the WeChat Official Account editor.
+     * The backend strips or ignores document-level &lt;style&gt;; this output uses inline styles only.
+     */
+    fun generateWeChatPasteHtml(markdownContent: String, layout: LayoutSettings, title: String, author: String): String {
+        val bodyContent = convertMarkdownToHtml(markdownContent)
+        val styledBody = applyWeChatInlineStyles(bodyContent, layout)
+        val ff =
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
+        val titleBlock = if (title.isNotBlank()) {
+            """<h1 style="font-size:${layout.h1Size}px;font-weight:bold;color:${layout.textColor};margin:0 0 8px;line-height:1.4;">${escapeHtml(title)}</h1>"""
+        } else ""
+        val authorBlock = if (author.isNotBlank()) {
+            """<p style="font-size:14px;color:${layout.subtitleColor};margin:0 0 20px;padding-bottom:16px;border-bottom:1px solid #eeeeee;">作者：${escapeHtml(author)}</p>"""
+        } else ""
+        return buildString {
+            append(
+                """<section style="box-sizing:border-box;max-width:${layout.contentMaxWidth}px;margin:0 auto;padding:20px 16px 40px;font-family:$ff;background-color:${layout.backgroundColor};color:${layout.textColor};font-size:${layout.baseFontSize}px;line-height:${layout.lineHeight};">"""
+            )
+            append(titleBlock)
+            append(authorBlock)
+            append(styledBody)
+            append("</section>")
+        }
+    }
+
+    internal fun applyWeChatInlineStyles(html: String, layout: LayoutSettings): String {
+        val pc = layout.primaryColor
+        val tc = layout.textColor
+        val sc = layout.subtitleColor
+        val ps = layout.paragraphSpacing
+        val h1s = layout.h1Size
+        val h2s = layout.h2Size
+        val h3s = layout.h3Size
+        val h4s = layout.h3Size - 2
+        val bfs = layout.baseFontSize
+
+        val quoteStyleAttr = when (layout.quoteStyle) {
+            QuoteStyle.LEFT_BORDER ->
+                "margin:16px 0;border-left:4px solid $pc;padding:8px 16px;background-color:#f9f9f9;color:$sc;"
+            QuoteStyle.BACKGROUND ->
+                "margin:16px 0;background-color:#f0f7f0;padding:12px 16px;border-radius:4px;color:$tc;border-left:none;"
+            QuoteStyle.ITALIC ->
+                "margin:16px 0;font-style:italic;padding:8px 16px;color:$sc;border:none;"
+        }
+
+        val (preBg, preFg) = when (layout.codeStyle) {
+            CodeStyle.DARK -> Pair("#282c34", "#abb2bf")
+            CodeStyle.LIGHT -> Pair("#f5f5f5", "#333333")
+            CodeStyle.GITHUB -> Pair("#f6f8fa", "#24292e")
+        }
+        val preOpen =
+            """<pre style="margin:16px 0;border-radius:6px;overflow-x:auto;background-color:$preBg;color:$preFg;">"""
+        val codeBlockOpenStyle =
+            "display:block;padding:16px;font-family:'Courier New',Courier,monospace;font-size:14px;line-height:1.5;background-color:transparent;color:inherit;"
+
+        var s = html
+        s = s.replace(Regex("<pre><code([^>]*)>")) { m ->
+            val extra = m.groupValues[1]
+            """$preOpen<code style="$codeBlockOpenStyle"$extra>"""
+        }
+        s = s.replace("<blockquote>", "<blockquote style=\"$quoteStyleAttr\">")
+        s = s.replace("<hr>", "<hr style=\"border:none;border-top:1px solid #eeeeee;margin:24px 0;\" />")
+        s = s.replace("<hr/>", "<hr style=\"border:none;border-top:1px solid #eeeeee;margin:24px 0;\" />")
+        s = s.replace(
+            "<p>",
+            "<p style=\"margin:0 0 ${ps}px;text-align:justify;\">"
+        )
+        s = s.replace(
+            "<h1>",
+            "<h1 style=\"font-size:${h1s}px;color:$pc;margin:28px 0 14px;font-weight:bold;padding-bottom:8px;border-bottom:3px solid $pc;line-height:1.35;\">"
+        )
+        s = s.replace(
+            "<h2>",
+            "<h2 style=\"font-size:${h2s}px;color:$pc;margin:22px 0 10px;font-weight:bold;padding-left:10px;border-left:4px solid $pc;line-height:1.4;\">"
+        )
+        s = s.replace(
+            "<h3>",
+            "<h3 style=\"font-size:${h3s}px;color:$tc;margin:18px 0 8px;font-weight:bold;padding-left:6px;border-left:3px solid $sc;line-height:1.4;\">"
+        )
+        s = s.replace(
+            "<h4>",
+            "<h4 style=\"font-size:${h4s}px;color:$tc;margin:14px 0 6px;font-weight:bold;padding:4px 10px;background-color:rgba(0,0,0,0.04);border-radius:4px;line-height:1.4;\">"
+        )
+        s = s.replace(
+            "<h5>",
+            "<h5 style=\"font-size:${bfs + 1}px;color:$sc;margin:12px 0 4px;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;line-height:1.4;\">"
+        )
+        s = s.replace(
+            "<h6>",
+            "<h6 style=\"font-size:${bfs}px;color:$sc;margin:10px 0 4px;font-weight:bold;font-style:italic;line-height:1.4;\">"
+        )
+        s = s.replace("<ul>", "<ul style=\"margin:8px 0 ${ps}px 24px;padding:0;\">")
+        s = s.replace("<ol>", "<ol style=\"margin:8px 0 ${ps}px 24px;padding:0;\">")
+        s = s.replace("<li>", "<li style=\"margin-bottom:6px;\">")
+        s = s.replace("<strong>", "<strong style=\"font-weight:bold;color:$tc;\">")
+        s = s.replace("<em>", "<em style=\"font-style:italic;\">")
+        s = s.replace("<del>", "<del style=\"text-decoration:line-through;color:$sc;\">")
+        s = s.replace("<u>", "<u style=\"text-decoration:underline;\">")
+        s = s.replace(
+            "<a href=",
+            "<a style=\"color:$pc;text-decoration:none;\" href="
+        )
+        s = s.replace(
+            "<img ",
+            "<img style=\"max-width:100%;height:auto;border-radius:4px;display:block;margin:16px auto;\" "
+        )
+        s = s.replace(
+            "<table>",
+            "<table style=\"width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;\">"
+        )
+        s = s.replace(
+            "<th>",
+            "<th style=\"border:1px solid #e0e0e0;padding:8px 12px;text-align:left;background-color:#f5f5f5;font-weight:bold;\">"
+        )
+        s = s.replace(
+            "<td>",
+            "<td style=\"border:1px solid #e0e0e0;padding:8px 12px;text-align:left;\">"
+        )
+        // Inline code only (not inside pre — those were rewritten to include style on opening code)
+        s = s.replace(
+            "<code>",
+            "<code style=\"font-family:'Courier New',Courier,monospace;font-size:14px;background-color:#f0f0f0;color:#e74c3c;padding:2px 6px;border-radius:3px;\">"
+        )
+        return s
+    }
+
     fun generateCss(layout: LayoutSettings): String {
         val quoteStyle = when (layout.quoteStyle) {
             QuoteStyle.LEFT_BORDER -> """

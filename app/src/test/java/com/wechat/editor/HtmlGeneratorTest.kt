@@ -50,4 +50,28 @@ class HtmlGeneratorTest {
         val css = HtmlGenerator.generateCss(defaultLayout)
         assertTrue("CSS should include font size", css.contains("${defaultLayout.baseFontSize}px"))
     }
+
+    @Test
+    fun `generateWeChatPasteHtml is fragment with inline styles only`() {
+        val html = HtmlGenerator.generateWeChatPasteHtml(
+            "正文一段",
+            defaultLayout,
+            "测试标题",
+            "作者甲"
+        )
+        assertTrue("No full document", !html.contains("<!DOCTYPE"))
+        assertTrue("No style block", !html.contains("<style>"))
+        assertTrue("Uses section wrapper", html.contains("<section style="))
+        assertTrue("Title escaped in inline h1", html.contains("测试标题"))
+        assertTrue("Author in fragment", html.contains("作者甲"))
+        assertTrue("Paragraph has inline style", html.contains("<p style="))
+    }
+
+    @Test
+    fun `applyWeChatInlineStyles handles fenced code with language class`() {
+        val body = HtmlGenerator.convertMarkdownToHtml("```kotlin\nval x = 1\n```")
+        val styled = HtmlGenerator.applyWeChatInlineStyles(body, defaultLayout)
+        assertTrue("pre has inline background", styled.contains("<pre style="))
+        assertTrue("code block keeps class attribute", styled.contains("language-kotlin"))
+    }
 }

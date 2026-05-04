@@ -127,7 +127,7 @@ fun EditorScreen(
                         )
                     }
                     IconButton(onClick = {
-                        val html = viewModel.getHtmlContent()
+                        val html = viewModel.getWeChatPasteHtml()
                         ClipboardUtils.copyToClipboard(context, html, "WeChat Article HTML")
                         viewModel.clearSnackbar()
                     }) {
