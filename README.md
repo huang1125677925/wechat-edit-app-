@@ -36,6 +36,25 @@
 - **最低 SDK**: 24 (Android 7.0)
 - **目标 SDK**: 34 (Android 14)
 
+## Git 工作流与分支约定
+
+在本地 **`main`** 与远程对齐（例如某次 PR 已合并进 `origin/main` 之后），再基于最新 `main` 新建功能分支：
+
+```bash
+git checkout main
+git fetch origin
+git pull origin main
+```
+
+新建分支时使用 **`cursor/`** 前缀，并以 **`-8153`** 作为后缀，中间为简短描述，例如：
+
+```bash
+git checkout -b cursor/work-from-main-8153
+git push -u origin cursor/work-from-main-8153
+```
+
+说明：`git pull origin main` 后的本地 `main` 会包含已合并进远程主干的改动（例如合并后的 PR #12 等）。
+
 ## 构建方式
 
 ### 本地构建
