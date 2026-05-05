@@ -17,8 +17,7 @@ import com.wechat.editor.model.H1Style
 import com.wechat.editor.model.H2Style
 import com.wechat.editor.model.H3Style
 import com.wechat.editor.model.LayoutSettings
-import com.wechat.editor.model.PreviewStylePresets
-import com.wechat.editor.model.QuoteStyle
+import com.wechat.editor.model.TemplateLayoutProvider
 import com.wechat.editor.model.TextAlignment
 import com.wechat.editor.model.TextStyle
 import com.wechat.editor.data.ArticleDraftStore
@@ -308,53 +307,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         scheduleAutoSave()
     }
 
-    private fun getLayoutForTemplate(template: ArticleTemplate): LayoutSettings {
-        PreviewStylePresets.layoutForHuashengTemplate(template)?.let { return it }
-        return when (template) {
-            ArticleTemplate.DEFAULT -> LayoutSettings()
-            ArticleTemplate.ELEGANT -> LayoutSettings(
-                baseFontSize = 16,
-                lineHeight = 2.0f,
-                primaryColor = "#C0392B",
-                textColor = "#2C3E50",
-                h1Size = 24,
-                h2Size = 20,
-                quoteStyle = QuoteStyle.ITALIC
-            )
-            ArticleTemplate.TECH -> LayoutSettings(
-                baseFontSize = 15,
-                lineHeight = 1.6f,
-                primaryColor = "#2980B9",
-                textColor = "#2C3E50",
-                codeStyle = com.wechat.editor.model.CodeStyle.GITHUB
-            )
-            ArticleTemplate.BUSINESS -> LayoutSettings(
-                baseFontSize = 16,
-                lineHeight = 1.8f,
-                primaryColor = "#1A252F",
-                textColor = "#2C3E50",
-                subtitleColor = "#555555",
-                paragraphSpacing = 16
-            )
-            ArticleTemplate.LIFE -> LayoutSettings(
-                baseFontSize = 16,
-                lineHeight = 1.9f,
-                primaryColor = "#E74C3C",
-                textColor = "#333333",
-                backgroundColor = "#FFFEF9"
-            )
-            ArticleTemplate.EDUCATION -> LayoutSettings(
-                baseFontSize = 16,
-                lineHeight = 1.8f,
-                primaryColor = "#27AE60",
-                textColor = "#2C3E50",
-                quoteStyle = QuoteStyle.BACKGROUND
-            )
-            // Huasheng-style presets are returned above via [PreviewStylePresets]; this branch
-            // satisfies exhaustiveness if that map is extended without a matching preset.
-            else -> LayoutSettings()
-        }
-    }
+    private fun getLayoutForTemplate(template: ArticleTemplate): LayoutSettings =
+        TemplateLayoutProvider.layoutForTemplate(template)
 
     fun updateLayoutSettings(settings: LayoutSettings) {
         _layoutSettings.value = settings

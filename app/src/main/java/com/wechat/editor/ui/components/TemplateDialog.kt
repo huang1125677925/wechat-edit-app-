@@ -34,6 +34,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.wechat.editor.model.ArticleTemplate
+import com.wechat.editor.model.TemplateLayoutProvider
+import com.wechat.editor.model.TemplatePreviewSamples
+import com.wechat.editor.ui.screens.PreviewPanel
+import com.wechat.editor.utils.HtmlGenerator
 
 @Composable
 fun TemplateDialog(
@@ -42,6 +46,15 @@ fun TemplateDialog(
     onDismiss: () -> Unit
 ) {
     var selectedTemplate by remember { mutableStateOf(currentTemplate) }
+
+    val previewHtml = remember(selectedTemplate) {
+        HtmlGenerator.generateHtml(
+            TemplatePreviewSamples.sampleMarkdown(selectedTemplate),
+            TemplateLayoutProvider.layoutForTemplate(selectedTemplate),
+            title = "预览 · ${selectedTemplate.displayName}",
+            author = "示例作者"
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -56,6 +69,21 @@ fun TemplateDialog(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
+                Text(
+                    text = "效果预览（示例文稿）",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                PreviewPanel(
+                    htmlContent = previewHtml,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+                Spacer(modifier = Modifier.height(14.dp))
                 ArticleTemplate.entries.forEach { template ->
                     TemplateItem(
                         template = template,
