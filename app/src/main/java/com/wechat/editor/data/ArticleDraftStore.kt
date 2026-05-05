@@ -86,6 +86,11 @@ private fun layoutToJson(l: LayoutSettings): JSONObject = JSONObject().apply {
     put("h3Style", l.h3Style.name)
     put("quoteStyle", l.quoteStyle.name)
     put("codeStyle", l.codeStyle.name)
+    put("pasteTitleColor", l.pasteTitleColor ?: JSONObject.NULL)
+    put("pasteLinkColor", l.pasteLinkColor ?: JSONObject.NULL)
+    put("pasteStrongColor", l.pasteStrongColor ?: JSONObject.NULL)
+    put("pasteCodeBackground", l.pasteCodeBackground ?: JSONObject.NULL)
+    put("pasteCodeForeground", l.pasteCodeForeground ?: JSONObject.NULL)
     put("extraPreviewCss", l.extraPreviewCss)
 }
 
@@ -108,6 +113,11 @@ private fun layoutFromJson(o: JSONObject): LayoutSettings = LayoutSettings(
     h3Style = o.optString("h3Style").toH3Style(),
     quoteStyle = o.optString("quoteStyle").toQuoteStyle(),
     codeStyle = o.optString("codeStyle").toCodeStyle(),
+    pasteTitleColor = o.optNullableString("pasteTitleColor"),
+    pasteLinkColor = o.optNullableString("pasteLinkColor"),
+    pasteStrongColor = o.optNullableString("pasteStrongColor"),
+    pasteCodeBackground = o.optNullableString("pasteCodeBackground"),
+    pasteCodeForeground = o.optNullableString("pasteCodeForeground"),
     extraPreviewCss = o.optString("extraPreviewCss", "")
 )
 
@@ -128,3 +138,9 @@ private fun String.toQuoteStyle(): QuoteStyle =
 
 private fun String.toCodeStyle(): CodeStyle =
     runCatching { CodeStyle.valueOf(this) }.getOrDefault(CodeStyle.DARK)
+
+private fun JSONObject.optNullableString(key: String): String? {
+    if (!has(key) || isNull(key)) return null
+    val s = optString(key)
+    return s.takeIf { it.isNotEmpty() }
+}

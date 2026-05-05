@@ -1,13 +1,31 @@
 package com.wechat.editor
 
+import com.wechat.editor.model.ArticleTemplate
 import com.wechat.editor.model.LayoutSettings
+import com.wechat.editor.model.PreviewStylePresets
 import com.wechat.editor.utils.HtmlGenerator
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HtmlGeneratorTest {
 
     private val defaultLayout = LayoutSettings()
+
+    @Test
+    fun `generateWeChatPasteHtml uses pasteLinkColor for links when set`() {
+        val layout = defaultLayout.copy(pasteLinkColor = "#576B95")
+        val html = HtmlGenerator.generateWeChatPasteHtml("[点击](https://example.com)", layout, "", "")
+        assertTrue(html.contains("color:#576B95"))
+    }
+
+    @Test
+    fun `WECHAT_CYBER_ZEN preset defines paste colors for WeChat-style editorial`() {
+        val layout = PreviewStylePresets.layoutForHuashengTemplate(ArticleTemplate.WECHAT_CYBER_ZEN)
+        assertTrue(layout != null)
+        assertEquals("#576B95", layout!!.pasteLinkColor)
+        assertEquals("#C0504D", layout.pasteTitleColor)
+    }
 
     @Test
     fun `generateHtml includes title`() {

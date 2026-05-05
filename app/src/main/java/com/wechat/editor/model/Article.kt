@@ -45,6 +45,8 @@ enum class ArticleTemplate(val displayName: String, val description: String) {
     HS_NYT("纽约时报", "Georgia 大标题、新闻纸质感"),
     /** Inspired by huasheng_editor `wechat-medium`. */
     HS_MEDIUM("Medium", "Georgia 标题、接近 Medium 长文"),
+    /** Warm gray / terracotta tech editorial (WeChat long-read style). */
+    WECHAT_CYBER_ZEN("赛博长文", "暖灰底、陶土红标题与强调、微信蓝链接；支持 HTML 浅绿虚线标注"),
     DEFAULT("默认样式", "简洁清晰的默认排版"),
     ELEGANT("优雅文艺", "适合文学、情感类文章"),
     TECH("科技简约", "适合科技、资讯类文章"),
@@ -72,6 +74,15 @@ data class LayoutSettings(
     val h3Style: H3Style = H3Style.THIN_LEFT_BORDER,
     val quoteStyle: QuoteStyle = QuoteStyle.LEFT_BORDER,
     val codeStyle: CodeStyle = CodeStyle.DARK,
+    /**
+     * Optional overrides for [HtmlGenerator.generateWeChatPasteHtml] (inline-only paste).
+     * When null, title uses [textColor], links use [primaryColor], strong uses [textColor], code follows [codeStyle].
+     */
+    val pasteTitleColor: String? = null,
+    val pasteLinkColor: String? = null,
+    val pasteStrongColor: String? = null,
+    val pasteCodeBackground: String? = null,
+    val pasteCodeForeground: String? = null,
     /**
      * Appended inside the preview `<style>` block after base rules. Use more specific selectors
      * (e.g. `.article-content h1`) to refine presets inspired by third-party style packs.
