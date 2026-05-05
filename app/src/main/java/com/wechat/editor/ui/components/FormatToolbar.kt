@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.FormatAlignCenter
@@ -247,6 +248,10 @@ private fun InsertTab(viewModel: EditorViewModel, isDeepSeekBusy: Boolean) {
             ToolbarIconButton(icon = Icons.Default.AutoAwesome, label = "DeepSeek 规范化排版") {
                 viewModel.polishContentWithDeepSeek()
             }
+        }
+        ToolbarDivider()
+        ToolbarIconButton(icon = Icons.Default.AutoFixHigh, label = "一键格式化 Markdown") {
+            viewModel.formatMarkdownContent()
         }
         ToolbarDivider()
         ToolbarIconButton(icon = Icons.Default.InsertLink, label = "链接") {
