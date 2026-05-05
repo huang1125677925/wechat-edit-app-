@@ -40,6 +40,13 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `convertMarkdownToHtml handles blockquote after escapeHtml restores line-start gt`() {
+        val html = HtmlGenerator.convertMarkdownToHtml("> 引用一行")
+        assertTrue("Should convert blockquote", html.contains("<blockquote>"))
+        assertTrue("Should not leave raw markdown marker in output", !html.contains("&gt; 引用"))
+    }
+
+    @Test
     fun `convertMarkdownToHtml handles strikethrough`() {
         val html = HtmlGenerator.convertMarkdownToHtml("~~strikethrough~~")
         assertTrue("Should convert strikethrough", html.contains("<del>strikethrough</del>"))

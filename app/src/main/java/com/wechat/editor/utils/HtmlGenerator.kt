@@ -426,6 +426,9 @@ object HtmlGenerator {
 
     fun convertMarkdownToHtml(markdown: String): String {
         var html = escapeHtml(markdown)
+        // Blockquote lines start with `>`; escapeHtml turns `>` into `&gt;`, which must be undone here
+        // so the blockquote regex below can match (preview/export were showing literal `>` / wrong styling).
+        html = html.replace(Regex("(?m)^&gt;"), ">")
 
         // Code blocks (before inline code)
         html = html.replace(Regex("```(\\w*)\\n([\\s\\S]*?)```")) { match ->
