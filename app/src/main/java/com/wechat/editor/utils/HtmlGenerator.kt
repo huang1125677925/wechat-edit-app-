@@ -512,30 +512,77 @@ object HtmlGenerator {
             "<ol>$items</ol>"
         }
 
-        // Paragraphs (wrap non-tagged lines)
-        val lines = html.split("\n")
+        // Paragraphs: merge Markdown "soft breaks" (single newline) into one <p> with <br/>,
+        // and only start a new paragraph after a blank line (Markdown paragraph semantics).
+        // Wrapping every physical line in its own <p> caused stacked margins in WeChat (looks like extra blank lines).
+        return mergeSoftBreakParagraphs(html)
+    }
+
+    /**
+     * Wraps loose lines into [p] tags. Consecutive non-block lines become one paragraph joined by [br].
+     * [pre] blocks are preserved (they may contain literal newlines).
+     */
+    internal fun mergeSoftBreakParagraphs(html: String): String {
+        val preChunks = mutableListOf<String>()
+        var idx = 0
+        val withMarkers = Regex("<pre>[\\s\\S]*?</pre>").replace(html) { m ->
+            val token = "\uE000${idx++}\uE001"
+            preChunks.add(m.value)
+            token
+        }
+        val lines = withMarkers.split("\n")
         val result = StringBuilder()
-        var inBlock = false
-        val blockTags = setOf("h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "pre", "hr", "img", "p")
+        val paragraphBuffer = mutableListOf<String>()
+
+        fun flushParagraph() {
+            if (paragraphBuffer.isEmpty()) return
+            val body = paragraphBuffer.joinToString("<br/>")
+            result.append("<p>").append(body).append("</p>\n")
+            paragraphBuffer.clear()
+        }
+
+        fun isBlockLine(trimmed: String): Boolean {
+            if (trimmed.isEmpty()) return false
+            if (trimmed.startsWith('\uE000') && trimmed.endsWith('\uE001')) return true
+            return BLOCK_LEVEL_LINE_PREFIXES.any { trimmed.startsWith(it) }
+        }
 
         for (line in lines) {
             val trimmed = line.trim()
-            if (trimmed.isEmpty()) {
-                if (!inBlock) result.append("")
-                continue
-            }
-            val isBlockElement = blockTags.any { tag ->
-                trimmed.startsWith("<$tag") || trimmed.startsWith("</$tag")
-            }
-            if (isBlockElement) {
-                result.append(trimmed).append("\n")
-            } else {
-                result.append("<p>").append(trimmed).append("</p>\n")
+            when {
+                trimmed.isEmpty() -> flushParagraph()
+                isBlockLine(trimmed) -> {
+                    flushParagraph()
+                    val restored = restorePrePlaceholders(trimmed, preChunks)
+                    result.append(restored).append('\n')
+                }
+                else -> paragraphBuffer.add(trimmed)
             }
         }
-
-        return result.toString()
+        flushParagraph()
+        return restorePrePlaceholders(result.toString(), preChunks)
     }
+
+    private fun restorePrePlaceholders(s: String, preChunks: List<String>): String {
+        var out = s
+        for (i in preChunks.indices) {
+            out = out.replace("\uE000${i}\uE001", preChunks[i])
+        }
+        return out
+    }
+
+    /**
+     * Opening lines that are already block-level HTML from earlier conversion steps.
+     * Intentionally excludes [p] so wrapped paragraphs are not mistaken for blocks.
+     */
+    private val BLOCK_LEVEL_LINE_PREFIXES = listOf(
+        "<h1", "<h2", "<h3", "<h4", "<h5", "<h6",
+        "<ul", "<ol", "</ul", "</ol",
+        "<blockquote", "</blockquote",
+        "<pre", "</pre",
+        "<hr", "<img",
+        "<table", "</table", "<tr", "</tr", "<th", "<td"
+    )
 
     private fun escapeHtml(text: String): String {
         // Preserve existing HTML tags while escaping bare special chars

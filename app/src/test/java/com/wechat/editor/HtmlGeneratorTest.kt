@@ -69,6 +69,35 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `convertMarkdownToHtml merges soft line breaks into one paragraph`() {
+        val md = "第一行\n第二行"
+        val html = HtmlGenerator.convertMarkdownToHtml(md)
+        assertEquals(
+            "<p>第一行<br/>第二行</p>\n",
+            html
+        )
+    }
+
+    @Test
+    fun `convertMarkdownToHtml starts new paragraph only after blank line`() {
+        val md = "第一段\n\n第二段"
+        val html = HtmlGenerator.convertMarkdownToHtml(md)
+        assertEquals(
+            "<p>第一段</p>\n<p>第二段</p>\n",
+            html
+        )
+    }
+
+    @Test
+    fun `mergeSoftBreakParagraphs preserves multiline pre blocks`() {
+        val inner = "line a\nline b"
+        val html = HtmlGenerator.mergeSoftBreakParagraphs("<pre><code>$inner</code></pre>")
+        assertTrue(html.contains("<pre><code>"))
+        assertTrue(html.contains("line a"))
+        assertTrue(html.contains("line b"))
+    }
+
+    @Test
     fun `convertMarkdownToHtml handles blockquote after escapeHtml restores line-start gt`() {
         val html = HtmlGenerator.convertMarkdownToHtml("> 引用一行")
         assertTrue("Should convert blockquote", html.contains("<blockquote>"))
