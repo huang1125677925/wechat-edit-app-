@@ -88,6 +88,8 @@ object PreviewStylePresets {
             h3Style = H3Style.THIN_LEFT_BORDER,
             quoteStyle = QuoteStyle.LEFT_BORDER,
             codeStyle = CodeStyle.DARK,
+            pasteStrongColor = "#1a1a1a",
+            pasteStrongBackgroundColor = "#fff3cd",
             extraPreviewCss = """
                 .article-content h1 { color: #1a1a1a !important; border-bottom: 3px solid #0066cc !important; padding-bottom: 12px; }
                 .article-content h2 { border-left: 5px solid #00a67d !important; padding-left: 16px; background: linear-gradient(to right, #f0f9ff 0%, transparent 100%); }
@@ -169,6 +171,8 @@ object PreviewStylePresets {
             h3Style = H3Style.BOLD_SUBTITLE,
             quoteStyle = QuoteStyle.LEFT_BORDER,
             codeStyle = CodeStyle.DARK,
+            pasteStrongColor = "#C15F3C",
+            pasteStrongBackgroundColor = "rgba(193, 95, 60, 0.08)",
             extraPreviewCss = """
                 .article-title { color: #C15F3C !important; letter-spacing: -0.02em; }
                 .article-content h1 { color: #C15F3C !important; letter-spacing: -0.02em; }

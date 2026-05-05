@@ -76,11 +76,14 @@ data class LayoutSettings(
     val codeStyle: CodeStyle = CodeStyle.DARK,
     /**
      * Optional overrides for [HtmlGenerator.generateWeChatPasteHtml] (inline-only paste).
-     * When null, title uses [textColor], links use [primaryColor], strong uses [textColor], code follows [codeStyle].
+     * When null, title uses [textColor], links use [primaryColor], strong uses [textColor] (and no strong background),
+     * code follows [codeStyle].
      */
     val pasteTitleColor: String? = null,
     val pasteLinkColor: String? = null,
     val pasteStrongColor: String? = null,
+    /** Inline background for `<strong>` in [HtmlGenerator.generateWeChatPasteHtml] (preview may use [extraPreviewCss]). */
+    val pasteStrongBackgroundColor: String? = null,
     val pasteCodeBackground: String? = null,
     val pasteCodeForeground: String? = null,
     /**

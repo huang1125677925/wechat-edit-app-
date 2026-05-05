@@ -89,6 +89,7 @@ private fun layoutToJson(l: LayoutSettings): JSONObject = JSONObject().apply {
     put("pasteTitleColor", l.pasteTitleColor ?: JSONObject.NULL)
     put("pasteLinkColor", l.pasteLinkColor ?: JSONObject.NULL)
     put("pasteStrongColor", l.pasteStrongColor ?: JSONObject.NULL)
+    put("pasteStrongBackgroundColor", l.pasteStrongBackgroundColor ?: JSONObject.NULL)
     put("pasteCodeBackground", l.pasteCodeBackground ?: JSONObject.NULL)
     put("pasteCodeForeground", l.pasteCodeForeground ?: JSONObject.NULL)
     put("extraPreviewCss", l.extraPreviewCss)
@@ -116,6 +117,7 @@ private fun layoutFromJson(o: JSONObject): LayoutSettings = LayoutSettings(
     pasteTitleColor = o.optNullableString("pasteTitleColor"),
     pasteLinkColor = o.optNullableString("pasteLinkColor"),
     pasteStrongColor = o.optNullableString("pasteStrongColor"),
+    pasteStrongBackgroundColor = o.optNullableString("pasteStrongBackgroundColor"),
     pasteCodeBackground = o.optNullableString("pasteCodeBackground"),
     pasteCodeForeground = o.optNullableString("pasteCodeForeground"),
     extraPreviewCss = o.optString("extraPreviewCss", "")

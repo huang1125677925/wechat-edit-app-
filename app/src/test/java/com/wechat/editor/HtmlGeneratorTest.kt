@@ -13,6 +13,17 @@ class HtmlGeneratorTest {
     private val defaultLayout = LayoutSettings()
 
     @Test
+    fun `generateWeChatPasteHtml includes pasteStrongBackgroundColor on strong`() {
+        val layout = defaultLayout.copy(
+            pasteStrongColor = "#1a1a1a",
+            pasteStrongBackgroundColor = "#fff3cd"
+        )
+        val html = HtmlGenerator.generateWeChatPasteHtml("**小标题**：正文", layout, "", "")
+        assertTrue(html.contains("background-color:#fff3cd"))
+        assertTrue(html.contains("color:#1a1a1a"))
+    }
+
+    @Test
     fun `generateWeChatPasteHtml uses pasteLinkColor for links when set`() {
         val layout = defaultLayout.copy(pasteLinkColor = "#576B95")
         val html = HtmlGenerator.generateWeChatPasteHtml("[点击](https://example.com)", layout, "", "")
