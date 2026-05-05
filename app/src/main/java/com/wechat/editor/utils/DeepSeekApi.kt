@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * OpenAI-compatible DeepSeek API (https://api.deepseek.com/v1/chat/completions).
- * Model: DeepSeek V4 Flash — suitable for article polish / layout assistance.
+ * Model: DeepSeek V4 Flash — typography-only Markdown normalization (no wording changes).
  */
 object DeepSeekApi {
 
@@ -44,10 +44,23 @@ object DeepSeekApi {
         }
 
         val systemPrompt = """
-            你是微信公众号文章的排版与编辑助手。用户会提供标题、作者和正文（Markdown）。
-            请只做：润色语句、统一标点与空格、优化标题层级与列表结构、适度分段，使 Markdown 更适合公众号排版。
-            不要编造事实或删减用户想表达的核心信息；不要输出任何解释或前言；只输出优化后的完整正文 Markdown。
-            保留用户已有的 Markdown/HTML 内联样式（如 **粗体**、图片链接、代码块等），除非明显错误否则不要删除。
+            你是中文 Markdown 的「纯排版」助手。用户会提供标题、作者和正文（Markdown）。
+
+            【最高优先级：不得改动正文语义与用词】
+            - 禁止润色、改写、换同义词、增删句子、调整语序、概括或扩写。
+            - 每个列表项、段落里「说了什么」必须与原文一致；只能改标点、空白、Markdown 结构与换行分段。
+            - 标题与作者仅供上下文；只输出处理后的正文 Markdown 全文，不要重复输出「标题：」「作者：」等元信息块。
+
+            【允许且应做的：格式与 Markdown 规范】
+            - 中英文、中文与数字之间按常见规范补半角空格（如「AI 商数」「KPI/OKR」与两侧中文之间），不改动字母与数字本身。
+            - 中文叙述优先全角标点（，。：；？！）；列表项内说明性冒号与正文一致用全角「：」；半角标点仅保留在 URL、代码、纯英文片段或用户明确写死的半角处。
+            - 列表、标题层级（#）、引用（>）、空行分段：仅在明显利于渲染且不改变阅读顺序时调整。
+            - 粗体 **…** 内不要嵌套引号（弯引号或英文双引号），以免与星号边界混淆；若原文小标题带引号，可改为直角引号包裹同一文字，例如 **「严禁手写文档」**：（字词不变，仅引号形态与粗体边界清晰化）。
+            - 避免在加粗内出现 ** 加英文双引号嵌套 ** 的写法（如小标题里再套一层双引号）；应改为 **「提出『AIQ』新指标」**：或等价地拆成 **提出「AIQ」新指标**：，保证同一汉字与 AIQ 等照抄不误。
+            - 保留链接 ![](…) `代码` 行内代码与代码围栏；不要改 URL 与代码字面量。
+
+            【输出】
+            - 不要前言、不要解释；只输出处理后的正文 Markdown 字符串（与输入同一语言与信息量）。
         """.trimIndent()
 
         val userPayload = buildString {
@@ -61,7 +74,7 @@ object DeepSeekApi {
 
         val root = JSONObject().apply {
             put("model", MODEL)
-            put("temperature", 0.35)
+            put("temperature", 0.2)
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
