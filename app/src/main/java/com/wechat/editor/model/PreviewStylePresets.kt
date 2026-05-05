@@ -237,6 +237,48 @@ object PreviewStylePresets {
                 .article-content hr { max-width: 300px; margin-left: auto; margin-right: auto; background-color: #e6e6e6 !important; }
             """.trimIndent()
         )
+        ArticleTemplate.WECHAT_CYBER_ZEN -> LayoutSettings(
+            fontFamily = "system",
+            baseFontSize = 16,
+            lineHeight = 1.75f,
+            paragraphSpacing = 20,
+            firstLineIndent = false,
+            contentMaxWidth = 677,
+            primaryColor = "#C0504D",
+            textColor = "#3E3E3E",
+            subtitleColor = "#888888",
+            backgroundColor = "#F7F7F7",
+            h1Size = 24,
+            h2Size = 21,
+            h3Size = 18,
+            h1Style = H1Style.PLAIN_BOLD,
+            h2Style = H2Style.PLAIN_COLOR,
+            h3Style = H3Style.BOLD_SUBTITLE,
+            quoteStyle = QuoteStyle.LEFT_BORDER,
+            codeStyle = CodeStyle.LIGHT,
+            pasteTitleColor = "#C0504D",
+            pasteLinkColor = "#576B95",
+            pasteStrongColor = "#3E3E3E",
+            pasteCodeBackground = "#E8F4F8",
+            pasteCodeForeground = "#333333",
+            extraPreviewCss = """
+                .article-title { color: #C0504D !important; font-weight: bold !important; }
+                .article-content h1, .article-content h2 { color: #C0504D !important; font-weight: bold !important; }
+                .article-content h3 { color: #3E3E3E !important; }
+                .article-content a { color: #576B95 !important; text-decoration: none !important; border-bottom: none !important; }
+                .article-content strong { color: #3E3E3E !important; font-weight: bold !important; }
+                .article-content code { font-family: "SF Mono", "PingFang SC", Consolas, monospace !important; background-color: #E8F4F8 !important; color: #333333 !important; border: none !important; padding: 2px 6px !important; border-radius: 4px !important; }
+                .article-content blockquote { background-color: #fafafa !important; border-left: 3px solid #C0504D !important; color: #5a5a5a !important; padding: 10px 14px !important; }
+                .article-content .cyber-zen-em { color: #C0504D !important; font-weight: bold !important; }
+                .article-content .cyber-zen-note {
+                    border-bottom: 1px dashed #A9D18E;
+                    padding-bottom: 2px;
+                    box-decoration-break: clone;
+                    -webkit-box-decoration-break: clone;
+                }
+                .article-content hr { border: none !important; border-top: 1px solid #e8e8e8 !important; margin: 28px 0 !important; }
+            """.trimIndent()
+        )
         else -> null
     }
 

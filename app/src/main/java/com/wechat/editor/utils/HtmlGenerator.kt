@@ -50,8 +50,9 @@ object HtmlGenerator {
         val bodyContent = convertMarkdownToHtml(markdownContent)
         val styledBody = applyWeChatInlineStyles(bodyContent, layout)
         val ff = PreviewStylePresets.bodyFontStack(layout.fontFamily).replace("\"", "'")
+        val titleColor = layout.pasteTitleColor ?: layout.textColor
         val titleBlock = if (title.isNotBlank()) {
-            """<h1 style="font-size:${layout.h1Size}px;font-weight:bold;color:${layout.textColor};margin:0 0 8px;line-height:1.4;">${escapeHtml(title)}</h1>"""
+            """<h1 style="font-size:${layout.h1Size}px;font-weight:bold;color:$titleColor;margin:0 0 8px;line-height:1.4;">${escapeHtml(title)}</h1>"""
         } else ""
         val authorBlock = if (author.isNotBlank()) {
             """<p style="font-size:14px;color:${layout.subtitleColor};margin:0 0 20px;padding-bottom:16px;border-bottom:1px solid #eeeeee;">作者：${escapeHtml(author)}</p>"""
@@ -84,10 +85,12 @@ object HtmlGenerator {
                 "margin:16px 0;font-style:italic;padding:8px 16px;color:$sc;border:none;"
         }
 
-        val (preBg, preFg) = when (layout.codeStyle) {
-            CodeStyle.DARK -> Pair("#282c34", "#abb2bf")
-            CodeStyle.LIGHT -> Pair("#f5f5f5", "#333333")
-            CodeStyle.GITHUB -> Pair("#f6f8fa", "#24292e")
+        val (preBg, preFg) = when {
+            layout.pasteCodeBackground != null && layout.pasteCodeForeground != null ->
+                Pair(layout.pasteCodeBackground, layout.pasteCodeForeground)
+            layout.codeStyle == CodeStyle.DARK -> Pair("#282c34", "#abb2bf")
+            layout.codeStyle == CodeStyle.LIGHT -> Pair("#f5f5f5", "#333333")
+            else -> Pair("#f6f8fa", "#24292e")
         }
         val preOpen =
             """<pre style="margin:16px 0;border-radius:6px;overflow-x:auto;background-color:$preBg;color:$preFg;">"""
@@ -125,13 +128,15 @@ object HtmlGenerator {
         s = s.replace("<ul>", "<ul style=\"margin:8px 0 ${ps}px 24px;padding:0;\">")
         s = s.replace("<ol>", "<ol style=\"margin:8px 0 ${ps}px 24px;padding:0;\">")
         s = s.replace("<li>", "<li style=\"margin-bottom:6px;\">")
-        s = s.replace("<strong>", "<strong style=\"font-weight:bold;color:$tc;\">")
+        val strongColor = layout.pasteStrongColor ?: tc
+        s = s.replace("<strong>", "<strong style=\"font-weight:bold;color:$strongColor;\">")
         s = s.replace("<em>", "<em style=\"font-style:italic;\">")
         s = s.replace("<del>", "<del style=\"text-decoration:line-through;color:$sc;\">")
         s = s.replace("<u>", "<u style=\"text-decoration:underline;\">")
+        val linkColor = layout.pasteLinkColor ?: pc
         s = s.replace(
             "<a href=",
-            "<a style=\"color:$pc;text-decoration:none;\" href="
+            "<a style=\"color:$linkColor;text-decoration:none;\" href="
         )
         s = s.replace(
             "<img ",
@@ -150,9 +155,11 @@ object HtmlGenerator {
             "<td style=\"border:1px solid #e0e0e0;padding:8px 12px;text-align:left;\">"
         )
         // Inline code only (not inside pre — those were rewritten to include style on opening code)
+        val inlineCodeBg = layout.pasteCodeBackground ?: "#f0f0f0"
+        val inlineCodeFg = layout.pasteCodeForeground ?: "#e74c3c"
         s = s.replace(
             "<code>",
-            "<code style=\"font-family:'Courier New',Courier,monospace;font-size:14px;background-color:#f0f0f0;color:#e74c3c;padding:2px 6px;border-radius:3px;\">"
+            "<code style=\"font-family:'Courier New',Courier,monospace;font-size:14px;background-color:$inlineCodeBg;color:$inlineCodeFg;padding:2px 6px;border-radius:3px;\">"
         )
         return s
     }
@@ -318,6 +325,7 @@ object HtmlGenerator {
         val pc = layout.primaryColor
         val tc = layout.textColor
         val size = layout.h1Size
+        val plainBoldColor = layout.pasteTitleColor ?: tc
         return when (layout.h1Style) {
             H1Style.UNDERLINE_BORDER ->
                 "h1 { font-size:${size}px; color:$pc; margin:28px 0 14px; font-weight:bold; padding-bottom:8px; border-bottom:3px solid $pc; line-height:1.35; }"
@@ -328,7 +336,7 @@ object HtmlGenerator {
             H1Style.CENTERED_LINE ->
                 "h1 { font-size:${size}px; color:$tc; margin:28px 0 14px; font-weight:bold; text-align:center; padding:10px 0; border-top:2px solid $pc; border-bottom:2px solid $pc; line-height:1.35; }"
             H1Style.PLAIN_BOLD ->
-                "h1 { font-size:${size}px; color:$tc; margin:28px 0 14px; font-weight:bold; line-height:1.35; }"
+                "h1 { font-size:${size}px; color:$plainBoldColor; margin:28px 0 14px; font-weight:bold; line-height:1.35; }"
         }
     }
 
@@ -373,6 +381,7 @@ object HtmlGenerator {
         val pc = layout.primaryColor
         val tc = layout.textColor
         val size = layout.h1Size
+        val plainBoldColor = layout.pasteTitleColor ?: tc
         return when (layout.h1Style) {
             H1Style.UNDERLINE_BORDER ->
                 "font-size:${size}px;color:$pc;margin:28px 0 14px;font-weight:bold;padding-bottom:8px;border-bottom:3px solid $pc;line-height:1.35;"
@@ -383,7 +392,7 @@ object HtmlGenerator {
             H1Style.CENTERED_LINE ->
                 "font-size:${size}px;color:$tc;margin:28px 0 14px;font-weight:bold;text-align:center;padding:10px 0;border-top:2px solid $pc;border-bottom:2px solid $pc;line-height:1.35;"
             H1Style.PLAIN_BOLD ->
-                "font-size:${size}px;color:$tc;margin:28px 0 14px;font-weight:bold;line-height:1.35;"
+                "font-size:${size}px;color:$plainBoldColor;margin:28px 0 14px;font-weight:bold;line-height:1.35;"
         }
     }
 
