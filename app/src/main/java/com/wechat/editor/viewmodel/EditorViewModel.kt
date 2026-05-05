@@ -25,6 +25,7 @@ import com.wechat.editor.data.UserSettingsStore
 import com.wechat.editor.utils.DeepSeekApi
 import com.wechat.editor.utils.ImgurLaApi
 import com.wechat.editor.utils.HtmlGenerator
+import com.wechat.editor.utils.MarkdownAutoFormatter
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -521,6 +522,21 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
      * Calls DeepSeek V4 (user API key from [UserSettingsStore]) to normalize Markdown typography only
      * (punctuation, spacing, structure) without changing wording.
      */
+    /**
+     * Fixes common Markdown issues locally (list markers, fences, emphasis, broken link tails)
+     * without network or API keys.
+     */
+    fun formatMarkdownContent() {
+        val raw = _contentValue.value.text
+        val formatted = MarkdownAutoFormatter.format(raw)
+        if (formatted == raw) {
+            _snackbarMessage.value = "未发现需要修复的格式问题"
+            return
+        }
+        updateContent(TextFieldValue(formatted))
+        _snackbarMessage.value = "已一键格式化正文"
+    }
+
     fun polishContentWithDeepSeek() {
         if (_editorState.value.isDeepSeekPolishing) return
         val apiKey = userSettingsStore.getDeepSeekApiKey()
