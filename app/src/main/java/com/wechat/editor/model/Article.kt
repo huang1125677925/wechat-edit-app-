@@ -29,6 +29,22 @@ data class Article(
 }
 
 enum class ArticleTemplate(val displayName: String, val description: String) {
+    /** Inspired by huasheng_editor `wechat-default`. */
+    CLASSIC_WECHAT("经典", "公众号常用蓝边标题与清晰正文"),
+    /** Inspired by huasheng_editor `hische-editorial` (杂志风). */
+    HS_MAGAZINE("杂志风", "衬线大字标题、暖色纸张感背景"),
+    /** Inspired by huasheng_editor `wechat-tech`. */
+    HS_TECH("技术", "蓝绿点缀、代码块对比强"),
+    /** Inspired by developer-blog aesthetics (warm docs + monospace). */
+    HS_AI_CODER("AI Coder", "适合 AI / 开发类长文与代码片段"),
+    /** Inspired by huasheng_editor `wechat-deepread`. */
+    HS_DEEP_READ("深度阅读", "高对比、留白舒适的精读版式"),
+    /** Inspired by huasheng_editor `wechat-anthropic` (Claude). */
+    HS_CLAUDE("Claude", "暖灰底、陶土色点缀"),
+    /** Inspired by huasheng_editor `wechat-nyt`. */
+    HS_NYT("纽约时报", "Georgia 大标题、新闻纸质感"),
+    /** Inspired by huasheng_editor `wechat-medium`. */
+    HS_MEDIUM("Medium", "Georgia 标题、接近 Medium 长文"),
     DEFAULT("默认样式", "简洁清晰的默认排版"),
     ELEGANT("优雅文艺", "适合文学、情感类文章"),
     TECH("科技简约", "适合科技、资讯类文章"),
@@ -55,7 +71,12 @@ data class LayoutSettings(
     val h2Style: H2Style = H2Style.LEFT_BORDER,
     val h3Style: H3Style = H3Style.THIN_LEFT_BORDER,
     val quoteStyle: QuoteStyle = QuoteStyle.LEFT_BORDER,
-    val codeStyle: CodeStyle = CodeStyle.DARK
+    val codeStyle: CodeStyle = CodeStyle.DARK,
+    /**
+     * Appended inside the preview `<style>` block after base rules. Use more specific selectors
+     * (e.g. `.article-content h1`) to refine presets inspired by third-party style packs.
+     */
+    val extraPreviewCss: String = ""
 )
 
 enum class QuoteStyle(val displayName: String) {

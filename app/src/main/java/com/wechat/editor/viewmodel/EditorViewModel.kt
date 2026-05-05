@@ -17,6 +17,7 @@ import com.wechat.editor.model.H1Style
 import com.wechat.editor.model.H2Style
 import com.wechat.editor.model.H3Style
 import com.wechat.editor.model.LayoutSettings
+import com.wechat.editor.model.PreviewStylePresets
 import com.wechat.editor.model.QuoteStyle
 import com.wechat.editor.model.TextAlignment
 import com.wechat.editor.model.TextStyle
@@ -308,6 +309,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun getLayoutForTemplate(template: ArticleTemplate): LayoutSettings {
+        PreviewStylePresets.layoutForHuashengTemplate(template)?.let { return it }
         return when (template) {
             ArticleTemplate.DEFAULT -> LayoutSettings()
             ArticleTemplate.ELEGANT -> LayoutSettings(
@@ -348,6 +350,9 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 textColor = "#2C3E50",
                 quoteStyle = QuoteStyle.BACKGROUND
             )
+            // Huasheng-style presets are returned above via [PreviewStylePresets]; this branch
+            // satisfies exhaustiveness if that map is extended without a matching preset.
+            else -> LayoutSettings()
         }
     }
 

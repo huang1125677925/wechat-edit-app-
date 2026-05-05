@@ -86,6 +86,7 @@ private fun layoutToJson(l: LayoutSettings): JSONObject = JSONObject().apply {
     put("h3Style", l.h3Style.name)
     put("quoteStyle", l.quoteStyle.name)
     put("codeStyle", l.codeStyle.name)
+    put("extraPreviewCss", l.extraPreviewCss)
 }
 
 private fun layoutFromJson(o: JSONObject): LayoutSettings = LayoutSettings(
@@ -106,7 +107,8 @@ private fun layoutFromJson(o: JSONObject): LayoutSettings = LayoutSettings(
     h2Style = o.optString("h2Style").toH2Style(),
     h3Style = o.optString("h3Style").toH3Style(),
     quoteStyle = o.optString("quoteStyle").toQuoteStyle(),
-    codeStyle = o.optString("codeStyle").toCodeStyle()
+    codeStyle = o.optString("codeStyle").toCodeStyle(),
+    extraPreviewCss = o.optString("extraPreviewCss", "")
 )
 
 private fun String.toArticleTemplate(): ArticleTemplate =
