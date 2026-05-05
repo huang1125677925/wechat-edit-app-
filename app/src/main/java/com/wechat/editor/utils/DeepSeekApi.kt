@@ -145,4 +145,98 @@ object DeepSeekApi {
             Result.Error(e.localizedMessage ?: e.message ?: "网络错误")
         }
     }
+
+    /**
+     * Writes a WeChat-style AI industry digest in Markdown from headline list + URLs.
+     * The model may summarize and group topics; it must not invent specific facts not implied by the titles.
+     */
+    suspend fun writeAiNewsDigestMarkdown(
+        apiKey: String,
+        feedGeneratedAt: String,
+        windowHours: Int,
+        itemCount: Int,
+        inputLines: String
+    ): Result = withContext(Dispatchers.IO) {
+        val key = apiKey.trim()
+        if (key.isEmpty()) {
+            return@withContext Result.Error("请先在设置中填写 DeepSeek API Key")
+        }
+        if (inputLines.isBlank()) {
+            return@withContext Result.Error("没有可用的资讯条目")
+        }
+
+        val systemPrompt = """
+            你是中文科技公众号编辑。用户会提供一批「AI / 科技」相关资讯的标题与链接（来自第三方聚合源；内容仅为标题级信息）。
+
+            【任务】
+            根据这些标题与链接，写一篇适合微信公众号长文排版的 **Markdown 正文**（不是 HTML）。
+
+            【写作要求】
+            - 语言：自然、专业的中文，适合一般科技读者；语气冷静，避免营销腔与标题党夸张。
+            - 结构：开头用 1 段话概括本期整体动向；正文按主题分节（用 ## 二级标题），每节下用有序或无序列表组织要点；**每个要点必须带可点击的 Markdown 链接** [标题或简短描述](url)，使用用户提供的 url，不要编造链接。
+            - 信息边界：你**没有**文章全文，只有标题。可以归纳「行业在关注哪些方向」、对明显相关的条目做**温和**合并，**禁止**捏造具体数据、公司行为、未在标题中出现的产品细节。不确定时写「据标题/报道方向」等弱化表述，或只列链接让用户自行阅读。
+            - 若某些条目主题孤立、难以归类，可放在「其他值得关注的动态」类小节，同样带链接。
+
+            【禁止】
+            - 不要输出 YAML front matter、不要输出「```」包裹的整篇代码块包裹全文（行内 `代码` 很少需要可不用）。
+            - 不要重复输出大段完全相同的链接列表。
+            - 不要输出与写作无关的前言（如「好的，这是文章」）。
+
+            【元信息（仅供参考，不要单独成行复述一整块）】
+            聚合数据生成时间（UTC/上游）：$feedGeneratedAt；时间窗口：约 ${windowHours} 小时；条目约 ${itemCount} 条。
+        """.trimIndent()
+
+        val userPayload = buildString {
+            append("请基于下列条目撰写正文 Markdown（从上往下尽可能覆盖重要条目；同一站点多条时可酌情合并，但不要遗漏明显 AI 相关热点）：\n\n")
+            append(inputLines)
+        }
+
+        val root = JSONObject().apply {
+            put("model", MODEL)
+            put("temperature", 0.5)
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "system")
+                    put("content", systemPrompt)
+                })
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", userPayload)
+                })
+            })
+        }
+
+        val request = Request.Builder()
+            .url(BASE_URL)
+            .addHeader("Authorization", "Bearer $key")
+            .addHeader("Content-Type", "application/json")
+            .post(root.toString().toRequestBody(jsonMedia))
+            .build()
+
+        runCatching {
+            client.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    val errMsg = runCatching {
+                        JSONObject(responseBody).optJSONObject("error")?.optString("message")
+                    }.getOrNull()
+                    return@use Result.Error(
+                        errMsg?.takeIf { it.isNotBlank() }
+                            ?: "请求失败 HTTP ${response.code}"
+                    )
+                }
+                val json = JSONObject(responseBody)
+                val choice = json.optJSONArray("choices")?.optJSONObject(0)
+                val content = choice?.optJSONObject("message")?.optString("content")
+                    ?: return@use Result.Error("响应格式异常")
+                val trimmed = content.trim()
+                if (trimmed.isEmpty()) {
+                    return@use Result.Error("模型返回为空")
+                }
+                Result.Success(trimmed)
+            }
+        }.getOrElse { e ->
+            Result.Error(e.localizedMessage ?: e.message ?: "网络错误")
+        }
+    }
 }
