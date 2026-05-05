@@ -45,7 +45,7 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun setMaxForModel(n: Int) {
-        _ui.update { it.copy(maxItemsForModel = n.coerceIn(20, 120)) }
+        _ui.update { it.copy(maxItemsForModel = n.coerceIn(20, 800)) }
     }
 
     fun loadFeed() {

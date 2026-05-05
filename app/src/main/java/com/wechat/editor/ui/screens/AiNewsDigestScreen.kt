@@ -117,8 +117,8 @@ fun AiNewsDigestScreen(
             Slider(
                 value = ui.maxItemsForModel.toFloat(),
                 onValueChange = { viewModel.setMaxForModel(it.toInt()) },
-                valueRange = 20f..120f,
-                steps = 19
+                valueRange = 20f..800f,
+                steps = 155
             )
 
             Row(
