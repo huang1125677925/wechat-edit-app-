@@ -113,6 +113,12 @@ object HtmlGenerator {
             "<p>",
             "<p style=\"margin:0 0 ${pasteBlockGap}px;text-align:justify;$indentStyle\">"
         )
+        // WeChat's editor treats <br/> inside a <p> as a full paragraph break, producing
+        // visible blank lines between what should be soft-break continuations.
+        // Expand every <p style="...">line<br/>line</p> into separate <p> elements:
+        // all lines except the last get margin-bottom:0 (no gap), the last keeps the
+        // paragraph gap margin so spacing between paragraphs is preserved.
+        s = expandBrInsideParagraphs(s, pasteBlockGap, indentStyle)
         s = s.replace("<h1>", "<h1 style=\"${h1InlineStyle(layout)}\">")
         s = s.replace("<h2>", "<h2 style=\"${h2InlineStyle(layout)}\">")
         s = s.replace("<h3>", "<h3 style=\"${h3InlineStyle(layout)}\">")
@@ -172,6 +178,49 @@ object HtmlGenerator {
             "<code style=\"font-family:'Courier New',Courier,monospace;font-size:14px;background-color:$inlineCodeBg;color:$inlineCodeFg;padding:2px 6px;border-radius:3px;\">"
         )
         return s
+    }
+
+    /**
+     * WeChat's Official Account editor interprets `<br/>` inside a `<p>` as a full paragraph
+     * break, making soft-line-break continuations appear as blank lines. This function expands
+     * every `<p style="…">A<br/>B<br/>C</p>` into separate `<p>` elements so that WeChat
+     * renders them as consecutive lines without extra gaps.
+     *
+     * Lines that are not the last in their paragraph group get `margin-bottom:0` to suppress the
+     * inter-line gap; the last line retains the original margin so paragraph spacing is preserved.
+     */
+    private fun expandBrInsideParagraphs(html: String, blockGap: Int, indentStyle: String): String {
+        val pWithStyle = Regex("""<p style="([^"]*)">([\s\S]*?)</p>""")
+        return pWithStyle.replace(html) { match ->
+            val styleAttr = match.groupValues[1]
+            val inner = match.groupValues[2]
+            if (!inner.contains("<br/>")) {
+                match.value
+            } else {
+                val parts = inner.split("<br/>")
+                val sb = StringBuilder()
+                for ((index, part) in parts.withIndex()) {
+                    val isLast = index == parts.size - 1
+                    val lineMargin = if (isLast) "margin:0 0 ${blockGap}px;" else "margin:0;"
+                    val lineIndent = if (index == 0) indentStyle else ""
+                    val existingStyle = styleAttr
+                        .replace(Regex("""margin:[^;]+;"""), "")
+                        .replace(Regex("""text-indent:[^;]+;"""), "")
+                        .trim().trimEnd(';')
+                    val newStyle = buildString {
+                        append(lineMargin)
+                        if (existingStyle.isNotEmpty()) {
+                            append(existingStyle)
+                            append(";")
+                        }
+                        if (lineIndent.isNotEmpty()) append(lineIndent)
+                    }
+                    sb.append("""<p style="$newStyle">$part</p>""")
+                    if (!isLast) sb.append('\n')
+                }
+                sb.toString()
+            }
+        }
     }
 
     fun generateCss(layout: LayoutSettings): String {
