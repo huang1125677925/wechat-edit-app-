@@ -8,12 +8,14 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.wechat.editor.viewmodel.AiNewsDigestViewModel
 import com.wechat.editor.viewmodel.ArticleListViewModel
 import com.wechat.editor.viewmodel.EditorViewModel
 import com.wechat.editor.viewmodel.SettingsViewModel
 
 sealed class Screen(val route: String) {
     object ArticleList : Screen("article_list")
+    object AiNewsDigest : Screen("ai_news_digest")
     object Settings : Screen("settings")
     object Editor : Screen("editor/{articleId}") {
         fun createRoute(articleId: String = "new") = "editor/$articleId"
@@ -24,6 +26,7 @@ sealed class Screen(val route: String) {
 fun WeChatEditorNavGraph(
     navController: NavHostController,
     articleListViewModel: ArticleListViewModel = viewModel(),
+    aiNewsDigestViewModel: AiNewsDigestViewModel = viewModel(),
     editorViewModel: EditorViewModel = viewModel(),
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
@@ -42,7 +45,23 @@ fun WeChatEditorNavGraph(
                     editorViewModel.loadArticle(article)
                     navController.navigate(Screen.Editor.createRoute(article.id))
                 },
-                onOpenSettings = { navController.navigate(Screen.Settings.route) }
+                onOpenSettings = { navController.navigate(Screen.Settings.route) },
+                onOpenAiNewsDigest = { navController.navigate(Screen.AiNewsDigest.route) }
+            )
+        }
+
+        composable(Screen.AiNewsDigest.route) {
+            AiNewsDigestScreen(
+                viewModel = aiNewsDigestViewModel,
+                onBack = { navController.popBackStack() },
+                onDigestReady = { article ->
+                    editorViewModel.loadArticle(article)
+                    navController.navigate(Screen.Editor.createRoute("new")) {
+                        popUpTo(Screen.ArticleList.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
             )
         }
 

@@ -112,12 +112,23 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun loadArticle(article: Article) {
-        _article.value = article
+        val html = HtmlGenerator.generateHtml(
+            article.content,
+            article.layoutSettings,
+            article.title,
+            article.author
+        )
+        _article.value = article.copy(htmlContent = html)
         _titleValue.value = TextFieldValue(article.title)
         _contentValue.value = TextFieldValue(article.content)
         _authorValue.value = TextFieldValue(article.author)
         _layoutSettings.value = article.layoutSettings
-        _editorState.update { it.copy(lastAutoSavedAtEpochMs = null) }
+        _editorState.update {
+            it.copy(
+                lastAutoSavedAtEpochMs = null,
+                wordCount = article.content.length
+            )
+        }
     }
 
     fun loadNewArticle() {
