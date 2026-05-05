@@ -47,4 +47,16 @@ class MarkdownAutoFormatterTest {
         val input = "```\n• not a list\n```"
         assertEquals(input, MarkdownAutoFormatter.format(input))
     }
+
+    @Test
+    fun `removes blank lines outside fences`() {
+        val input = "第一段\n\n\n第二段"
+        assertEquals("第一段\n第二段", MarkdownAutoFormatter.format(input))
+    }
+
+    @Test
+    fun `preserves blank lines inside fenced code`() {
+        val input = "```\nline1\n\nline2\n```"
+        assertEquals(input, MarkdownAutoFormatter.format(input))
+    }
 }

@@ -2,8 +2,9 @@ package com.wechat.editor.utils
 
 /**
  * Local, deterministic cleanup for AI-generated Markdown: list markers,
- * emphasis markers, and obvious broken link fragments — without calling APIs.
- * Lines inside ``` fenced blocks are passed through unchanged.
+ * emphasis markers, obvious broken link fragments, and removal of blank lines
+ * outside fenced code blocks — without calling APIs.
+ * Lines inside ``` fenced blocks are passed through unchanged (including inner blank lines).
  */
 object MarkdownAutoFormatter {
 
@@ -47,7 +48,10 @@ object MarkdownAutoFormatter {
             }
 
             val normalizedLine = normalizeListLine(line)
-            stripOrphanLinkTail(normalizedLine)?.let { out.add(it) }
+            stripOrphanLinkTail(normalizedLine)?.let { candidate ->
+                if (candidate.isBlank()) return@let
+                out.add(candidate)
+            }
             i++
         }
 
