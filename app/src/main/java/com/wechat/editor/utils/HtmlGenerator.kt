@@ -73,6 +73,9 @@ object HtmlGenerator {
         val tc = layout.textColor
         val sc = layout.subtitleColor
         val ps = layout.paragraphSpacing
+        // Preview uses [paragraphSpacing] for airy layout; the Official Account editor often turns
+        // large margin-bottom on block elements into extra vertical gaps (looks like blank lines).
+        val pasteBlockGap = minOf(ps, 8)
         val h4s = layout.h3Size - 2
         val bfs = layout.baseFontSize
 
@@ -108,7 +111,7 @@ object HtmlGenerator {
         val indentStyle = if (layout.firstLineIndent) "text-indent:2em;" else ""
         s = s.replace(
             "<p>",
-            "<p style=\"margin:0 0 ${ps}px;text-align:justify;$indentStyle\">"
+            "<p style=\"margin:0 0 ${pasteBlockGap}px;text-align:justify;$indentStyle\">"
         )
         s = s.replace("<h1>", "<h1 style=\"${h1InlineStyle(layout)}\">")
         s = s.replace("<h2>", "<h2 style=\"${h2InlineStyle(layout)}\">")
@@ -125,9 +128,9 @@ object HtmlGenerator {
             "<h6>",
             "<h6 style=\"font-size:${bfs}px;color:$sc;margin:10px 0 4px;font-weight:bold;font-style:italic;line-height:1.4;\">"
         )
-        s = s.replace("<ul>", "<ul style=\"margin:8px 0 ${ps}px 24px;padding:0;\">")
-        s = s.replace("<ol>", "<ol style=\"margin:8px 0 ${ps}px 24px;padding:0;\">")
-        s = s.replace("<li>", "<li style=\"margin-bottom:6px;\">")
+        s = s.replace("<ul>", "<ul style=\"margin:4px 0 ${pasteBlockGap}px 24px;padding:0;\">")
+        s = s.replace("<ol>", "<ol style=\"margin:4px 0 ${pasteBlockGap}px 24px;padding:0;\">")
+        s = s.replace("<li>", "<li style=\"margin-bottom:4px;\">")
         val strongColor = layout.pasteStrongColor ?: tc
         val strongBg = layout.pasteStrongBackgroundColor
         val strongStyle = buildString {

@@ -146,4 +146,18 @@ class HtmlGeneratorTest {
         assertTrue("pre has inline background", styled.contains("<pre style="))
         assertTrue("code block keeps class attribute", styled.contains("language-kotlin"))
     }
+
+    @Test
+    fun `applyWeChatInlineStyles uses capped spacing for paragraph margins on WeChat paste`() {
+        val layout = defaultLayout.copy(paragraphSpacing = 24)
+        val styled = HtmlGenerator.applyWeChatInlineStyles("<p>一段</p>", layout)
+        assertTrue("paste HTML should not use full paragraphSpacing as margin-bottom", styled.contains("margin:0 0 8px"))
+    }
+
+    @Test
+    fun `applyWeChatInlineStyles uses capped spacing for list margins on WeChat paste`() {
+        val layout = defaultLayout.copy(paragraphSpacing = 24)
+        val styled = HtmlGenerator.applyWeChatInlineStyles("<ul><li>a</li></ul>", layout)
+        assertTrue(styled.contains("margin:4px 0 8px 24px"))
+    }
 }
