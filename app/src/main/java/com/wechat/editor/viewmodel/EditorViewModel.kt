@@ -553,7 +553,8 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /**
-     * Calls DeepSeek V4 (user API key from [UserSettingsStore]) to polish Markdown layout and wording.
+     * Calls DeepSeek V4 (user API key from [UserSettingsStore]) to normalize Markdown typography only
+     * (punctuation, spacing, structure) without changing wording.
      */
     fun polishContentWithDeepSeek() {
         if (_editorState.value.isDeepSeekPolishing) return
@@ -574,7 +575,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             ) {
                 is DeepSeekApi.Result.Success -> {
                     updateContent(TextFieldValue(result.markdown))
-                    _snackbarMessage.value = "DeepSeek 已优化正文排版"
+                    _snackbarMessage.value = "DeepSeek 已规范化正文排版"
                 }
                 is DeepSeekApi.Result.Error -> {
                     _snackbarMessage.value = "DeepSeek：${result.message}"

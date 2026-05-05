@@ -67,7 +67,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "在编辑器中可使用 DeepSeek V4 优化文章 Markdown 排版与润色。请在 DeepSeek 开放平台创建 API Key 并粘贴到下方；密钥仅保存在本机，不会上传到我们的服务器。",
+                text = "在编辑器中可使用 DeepSeek V4 规范化 Markdown：仅调整标点、空格与结构，不改写正文措辞。请在 DeepSeek 开放平台创建 API Key 并粘贴到下方；密钥仅保存在本机，不会上传到我们的服务器。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
             )

@@ -244,7 +244,7 @@ private fun InsertTab(viewModel: EditorViewModel, isDeepSeekBusy: Boolean) {
                 strokeWidth = 2.dp
             )
         } else {
-            ToolbarIconButton(icon = Icons.Default.AutoAwesome, label = "DeepSeek 排版") {
+            ToolbarIconButton(icon = Icons.Default.AutoAwesome, label = "DeepSeek 规范化排版") {
                 viewModel.polishContentWithDeepSeek()
             }
         }
