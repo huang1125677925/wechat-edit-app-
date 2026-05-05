@@ -70,8 +70,10 @@ object MarkdownAutoFormatter {
         val n = next.trim()
         if (!n.startsWith("http://") && !n.startsWith("https://")) return null
         val ws = n.indexOfFirst { it.isWhitespace() }
-        val urlPart = if (ws == -1) n else n.substring(0, ws)
+        var urlPart = if (ws == -1) n else n.substring(0, ws)
         val suffix = if (ws == -1) "" else n.substring(ws)
+        // Closing `)` of the markdown link is often on the URL line: `https://x.com/path)`
+        if (urlPart.endsWith(')')) urlPart = urlPart.dropLast(1)
         return trimmed + urlPart + ")" + suffix
     }
 
