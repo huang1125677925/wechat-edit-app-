@@ -129,7 +129,14 @@ object HtmlGenerator {
         s = s.replace("<ol>", "<ol style=\"margin:8px 0 ${ps}px 24px;padding:0;\">")
         s = s.replace("<li>", "<li style=\"margin-bottom:6px;\">")
         val strongColor = layout.pasteStrongColor ?: tc
-        s = s.replace("<strong>", "<strong style=\"font-weight:bold;color:$strongColor;\">")
+        val strongBg = layout.pasteStrongBackgroundColor
+        val strongStyle = buildString {
+            append("font-weight:bold;color:$strongColor;")
+            if (!strongBg.isNullOrBlank()) {
+                append("background-color:$strongBg;padding:2px 4px;border-radius:3px;")
+            }
+        }
+        s = s.replace("<strong>", "<strong style=\"$strongStyle\">")
         s = s.replace("<em>", "<em style=\"font-style:italic;\">")
         s = s.replace("<del>", "<del style=\"text-decoration:line-through;color:$sc;\">")
         s = s.replace("<u>", "<u style=\"text-decoration:underline;\">")
