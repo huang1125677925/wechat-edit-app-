@@ -576,15 +576,15 @@ object HtmlGenerator {
             val alt = match.groupValues[1]
             val src = match.groupValues[2]
             val token = markdownLinkToken(protectedLinks.size)
-            protectedLinks.add("<img src=\"$src\" alt=\"$alt\" />")
+            protectedLinks.add("<img src=\"${escapeHtmlAttribute(src)}\" alt=\"${escapeHtmlAttribute(alt)}\" />")
             token
         }
         out = out.replace(Regex("\\[([^\\]]+)]\\(([^)]+)\\)")) { match ->
             val text = match.groupValues[1]
             val href = match.groupValues[2]
             val token = markdownLinkToken(protectedLinks.size)
-            protectedLinks.add("<a href=\"$href\">$text</a>")
-            token
+            protectedLinks.add("<a href=\"${escapeHtmlAttribute(href)}\">")
+            "$token$text</a>"
         }
         return out
     }
@@ -598,6 +598,12 @@ object HtmlGenerator {
     }
 
     private fun markdownLinkToken(index: Int): String = "\uE100MDLINK$index\uE101"
+
+    private fun escapeHtmlAttribute(value: String): String {
+        return value
+            .replace("\"", "&quot;")
+            .replace("'", "&#39;")
+    }
 
     /**
      * Wraps loose lines into [p] tags. Consecutive non-block lines become one paragraph joined by [br].

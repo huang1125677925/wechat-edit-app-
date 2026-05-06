@@ -77,6 +77,13 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `convertMarkdownToHtml still formats emphasis inside link text`() {
+        val html = HtmlGenerator.convertMarkdownToHtml("[**重点链接**](https://example.com?a=1&b=2)")
+
+        assertTrue(html.contains("""<a href="https://example.com?a=1&amp;b=2"><strong>重点链接</strong></a>"""))
+    }
+
+    @Test
     fun `convertMarkdownToHtml handles italic`() {
         val html = HtmlGenerator.convertMarkdownToHtml("*italic text*")
         assertTrue("Should convert italic markdown", html.contains("<em>italic text</em>"))
