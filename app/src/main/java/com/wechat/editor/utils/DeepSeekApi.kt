@@ -250,7 +250,9 @@ object DeepSeekApi {
         feedGeneratedAt: String,
         windowHours: Int,
         itemCount: Int,
-        inputLines: String
+        inputLines: String,
+        /** Optional plain-text block (e.g. Perps-news indices snapshot) appended to the user message. */
+        extraContext: String? = null
     ): Result = withContext(Dispatchers.IO) {
         val key = apiKey.trim()
         if (key.isEmpty()) {
@@ -270,7 +272,7 @@ object DeepSeekApi {
             - 语言：自然、专业的中文，适合一般投资者阅读；语气冷静，避免营销腔与标题党夸张；**不构成投资建议**，可适时提醒「仅供参考，以原文为准」类表述（简短、不重复堆砌）。
             - 结构：开头用 1 段话概括本期市场整体关注点；正文按主题分节（用 ## 二级标题），每节下用有序或无序列表组织要点；**每个要点必须带可点击的 Markdown 链接** [标题或简短描述](url)，使用用户提供的 url，不要编造链接。
             - 列表格式：每个要点都必须以 `- ` 或 `1. ` 开头；同一要点的多个参考链接必须写在同一个列表项内，例如 `- 要点说明。参考：[标题](url)、[标题](url)`。不要把参考链接单独放到没有列表符号的新行。
-            - 信息边界：你**没有**文章全文，只有标题。可以归纳「市场在关注哪些方向」、对明显相关的条目做**温和**合并，**禁止**捏造具体数据、监管表态细节、未在标题中出现的价格或点位。不确定时写「据标题/报道方向」等弱化表述，或只列链接让用户自行阅读。
+            - 信息边界：你**没有**文章全文，只有标题（以及用户可能附带的少量结构化快照文本，如指数涨跌）。可以归纳「市场在关注哪些方向」、对明显相关的条目做**温和**合并，**禁止**捏造具体数据、监管表态细节、未在标题或附带快照中出现的价格或点位。不确定时写「据标题/报道方向」等弱化表述，或只列链接让用户自行阅读。
             - 若某些条目主题孤立、难以归类，可放在「其他值得关注的动态」类小节，同样带链接。
 
             【禁止】
@@ -285,6 +287,11 @@ object DeepSeekApi {
 
         val userPayload = buildString {
             append("请基于下列条目撰写正文 Markdown（从上往下尽可能覆盖重要条目；同一来源多条时可酌情合并，但不要遗漏明显宏观或市场相关热点）：\n\n")
+            val ctx = extraContext?.trim().orEmpty()
+            if (ctx.isNotEmpty()) {
+                append(ctx)
+                append("\n\n")
+            }
             append(inputLines)
         }
 

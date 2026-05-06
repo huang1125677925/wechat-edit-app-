@@ -6,7 +6,9 @@ data class AiNewsFeed(
     val generatedAt: String,
     val windowHours: Int,
     val totalItems: Int,
-    val items: List<AiNewsItem>
+    val items: List<AiNewsItem>,
+    /** Optional extra context for market digest (e.g. Perps-news `indices.json` snapshot). */
+    val perpsContext: String? = null
 )
 
 data class AiNewsItem(
