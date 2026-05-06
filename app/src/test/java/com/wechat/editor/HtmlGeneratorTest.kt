@@ -57,6 +57,26 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `convertMarkdownToHtml does not treat wechat url underscores as emphasis`() {
+        val markdown = "[Claude Code成本爆降](https://mp.weixin.qq.com/s?__biz=MzAxOTcxNTIwNQ%3D%3D&mid=2457993794)"
+        val html = HtmlGenerator.convertMarkdownToHtml(markdown)
+
+        assertTrue(html.contains("""<a href="https://mp.weixin.qq.com/s?__biz=MzAxOTcxNTIwNQ%3D%3D&amp;mid=2457993794">Claude Code成本爆降</a>"""))
+        assertTrue("URL must not be split by strong tags", !html.contains("<strong>biz="))
+        assertTrue("href must not contain nested markup", !html.contains("""href="https://mp.weixin.qq.com/s?<strong>"""))
+    }
+
+    @Test
+    fun `generateWeChatPasteHtml keeps multiple wechat links legal on one list item`() {
+        val markdown = "- 参考：[Claude Code成本爆降](https://mp.weixin.qq.com/s?__biz=MzAxOTcxNTIwNQ%3D%3D&mid=2457993794)、[DeepSeek版Claude Code](https://mp.weixin.qq.com/s?__biz=MzIzNjc1NzUzMw%3D%3D&mid=2247888322)"
+        val html = HtmlGenerator.generateWeChatPasteHtml(markdown, defaultLayout, "", "")
+
+        assertTrue(html.contains("href=\"https://mp.weixin.qq.com/s?__biz=MzAxOTcxNTIwNQ%3D%3D&amp;mid=2457993794\""))
+        assertTrue(html.contains("href=\"https://mp.weixin.qq.com/s?__biz=MzIzNjc1NzUzMw%3D%3D&amp;mid=2247888322\""))
+        assertTrue("WeChat paste HTML must not put strong tags inside href", !html.contains("<a style=\"color:#2980B9;text-decoration:none;\" href=\"https://mp.weixin.qq.com/s?<strong"))
+    }
+
+    @Test
     fun `convertMarkdownToHtml handles italic`() {
         val html = HtmlGenerator.convertMarkdownToHtml("*italic text*")
         assertTrue("Should convert italic markdown", html.contains("<em>italic text</em>"))

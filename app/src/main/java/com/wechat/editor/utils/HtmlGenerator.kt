@@ -525,6 +525,9 @@ object HtmlGenerator {
         html = html.replace(Regex("^##\\s+(.+)$", RegexOption.MULTILINE), "<h2>$1</h2>")
         html = html.replace(Regex("^#\\s+(.+)$", RegexOption.MULTILINE), "<h1>$1</h1>")
 
+        val protectedLinks = mutableListOf<String>()
+        html = protectMarkdownLinks(html, protectedLinks)
+
         // Bold and italic
         html = html.replace(Regex("\\*\\*\\*(.+?)\\*\\*\\*"), "<strong><em>$1</em></strong>")
         html = html.replace(Regex("\\*\\*(.+?)\\*\\*"), "<strong>$1</strong>")
@@ -537,18 +540,6 @@ object HtmlGenerator {
 
         // Inline code
         html = html.replace(Regex("`([^`]+)`"), "<code>$1</code>")
-
-        // Links
-        html = html.replace(Regex("!\\[([^\\]]*)]\\(([^)]+)\\)")) { match ->
-            val alt = match.groupValues[1]
-            val src = match.groupValues[2]
-            "<img src=\"$src\" alt=\"$alt\" />"
-        }
-        html = html.replace(Regex("\\[([^\\]]+)]\\(([^)]+)\\)")) { match ->
-            val text = match.groupValues[1]
-            val href = match.groupValues[2]
-            "<a href=\"$href\">$text</a>"
-        }
 
         // Horizontal rule
         html = html.replace(Regex("^(---|-{3,}|\\*{3,}|_{3,})$", RegexOption.MULTILINE), "<hr>")
@@ -572,11 +563,41 @@ object HtmlGenerator {
             "<ol>$items</ol>"
         }
 
+        html = restoreProtectedMarkdownLinks(html, protectedLinks)
+
         // Paragraphs: merge Markdown "soft breaks" (single newline) into one <p> with <br/>,
         // and only start a new paragraph after a blank line (Markdown paragraph semantics).
         // Wrapping every physical line in its own <p> caused stacked margins in WeChat (looks like extra blank lines).
         return mergeSoftBreakParagraphs(html)
     }
+
+    private fun protectMarkdownLinks(html: String, protectedLinks: MutableList<String>): String {
+        var out = html.replace(Regex("!\\[([^\\]]*)]\\(([^)]+)\\)")) { match ->
+            val alt = match.groupValues[1]
+            val src = match.groupValues[2]
+            val token = markdownLinkToken(protectedLinks.size)
+            protectedLinks.add("<img src=\"$src\" alt=\"$alt\" />")
+            token
+        }
+        out = out.replace(Regex("\\[([^\\]]+)]\\(([^)]+)\\)")) { match ->
+            val text = match.groupValues[1]
+            val href = match.groupValues[2]
+            val token = markdownLinkToken(protectedLinks.size)
+            protectedLinks.add("<a href=\"$href\">$text</a>")
+            token
+        }
+        return out
+    }
+
+    private fun restoreProtectedMarkdownLinks(html: String, protectedLinks: List<String>): String {
+        var out = html
+        for (i in protectedLinks.indices) {
+            out = out.replace(markdownLinkToken(i), protectedLinks[i])
+        }
+        return out
+    }
+
+    private fun markdownLinkToken(index: Int): String = "\uE100MDLINK$index\uE101"
 
     /**
      * Wraps loose lines into [p] tags. Consecutive non-block lines become one paragraph joined by [br].
