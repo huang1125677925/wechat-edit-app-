@@ -178,6 +178,24 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `applyWeChatInlineStyles wraps li content in zero-margin p to prevent WeChat blank lines`() {
+        val html = HtmlGenerator.convertMarkdownToHtml("- 项目一\n- 项目二\n- 项目三")
+        val styled = HtmlGenerator.applyWeChatInlineStyles(html, defaultLayout)
+        assertTrue("Each <li> should contain an inner <p> with zero margins", styled.contains("""<li style="margin:0 0 4px"""))
+        assertTrue("Inner p should have margin:0", styled.contains("""<p style="margin:0;padding:0"""))
+        assertTrue("Should still keep three list items", styled.split("</li>").size == 4)
+    }
+
+    @Test
+    fun `applyWeChatInlineStyles paste list margin caps small gap`() {
+        // Even with very large paragraphSpacing, the paste output for ul should cap at small gap
+        val layout = defaultLayout.copy(paragraphSpacing = 32)
+        val html = HtmlGenerator.convertMarkdownToHtml("- a\n- b")
+        val styled = HtmlGenerator.applyWeChatInlineStyles(html, layout)
+        assertTrue(styled.contains("margin:4px 0 8px 24px"))
+    }
+
+    @Test
     fun `applyWeChatInlineStyles preserves paragraph gap on last br-split line only`() {
         val layout = defaultLayout.copy(paragraphSpacing = 10)
         val input = """<p style="margin:0 0 8px;text-align:justify;">A<br/>B</p>"""

@@ -134,9 +134,17 @@ object HtmlGenerator {
             "<h6>",
             "<h6 style=\"font-size:${bfs}px;color:$sc;margin:10px 0 4px;font-weight:bold;font-style:italic;line-height:1.4;\">"
         )
-        s = s.replace("<ul>", "<ul style=\"margin:4px 0 ${pasteBlockGap}px 24px;padding:0;\">")
-        s = s.replace("<ol>", "<ol style=\"margin:4px 0 ${pasteBlockGap}px 24px;padding:0;\">")
-        s = s.replace("<li>", "<li style=\"margin-bottom:4px;\">")
+        s = s.replace("<ul>", "<ul style=\"margin:4px 0 ${pasteBlockGap}px 24px;padding:0;list-style-type:disc;\">")
+        s = s.replace("<ol>", "<ol style=\"margin:4px 0 ${pasteBlockGap}px 24px;padding:0;list-style-type:decimal;\">")
+        // WeChat's Official Account editor auto-injects a <p> around the bare text inside an <li>,
+        // and that injected <p> carries WeChat's default paragraph margin (~16px), which paints
+        // visible blank lines between list items even when our own <li> margin-bottom is small.
+        // Pre-wrap each <li> content in our own <p> with explicit zero margins to preempt WeChat's
+        // wrapper injection.
+        s = s.replace(Regex("""<li>([\s\S]*?)</li>""")) { m ->
+            val inner = m.groupValues[1]
+            """<li style="margin:0 0 4px;line-height:${layout.lineHeight};"><p style="margin:0;padding:0;line-height:${layout.lineHeight};">$inner</p></li>"""
+        }
         val strongColor = layout.pasteStrongColor ?: tc
         val strongBg = layout.pasteStrongBackgroundColor
         val strongStyle = buildString {
