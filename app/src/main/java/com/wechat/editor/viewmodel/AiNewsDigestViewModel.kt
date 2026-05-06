@@ -10,6 +10,7 @@ import com.wechat.editor.model.Article
 import com.wechat.editor.model.ArticleTemplate
 import com.wechat.editor.model.TemplateLayoutProvider
 import com.wechat.editor.utils.AiNewsAggregatorApi
+import com.wechat.editor.utils.AiNewsDigestMarkdownSanitizer
 import com.wechat.editor.utils.DeepSeekApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,15 +38,31 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun setWindow24h() {
-        _ui.update { it.copy(windowHours = 24) }
+        setWindowHours(24)
     }
 
     fun setWindow7d() {
-        _ui.update { it.copy(windowHours = 168) }
+        setWindowHours(168)
     }
 
     fun setMaxForModel(n: Int) {
         _ui.update { it.copy(maxItemsForModel = n.coerceIn(20, 800)) }
+    }
+
+    private fun setWindowHours(hours: Int) {
+        if (_ui.value.windowHours == hours) return
+        loadedFeed = null
+        _ui.update {
+            it.copy(
+                windowHours = hours,
+                feedMeta = null,
+                feedError = null,
+                generateError = null,
+                sourceOptions = emptyList(),
+                selectedSourceKeys = emptySet(),
+                items = emptyList()
+            )
+        }
     }
 
     fun loadFeed() {
@@ -59,12 +76,16 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
                             isLoadingFeed = false,
                             feedError = r.message,
                             feedMeta = null,
+                            sourceOptions = emptyList(),
+                            selectedSourceKeys = emptySet(),
                             items = emptyList()
                         )
                     }
                 }
                 is AiNewsAggregatorApi.Result.Success -> {
                     loadedFeed = r.feed
+                    val sourceOptions = buildSourceOptions(r.feed.items)
+                    val selectedSourceKeys = sourceOptions.map { it.key }.toSet()
                     _ui.update {
                         it.copy(
                             isLoadingFeed = false,
@@ -74,11 +95,48 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
                                 windowHours = r.feed.windowHours,
                                 totalItems = r.feed.totalItems
                             ),
-                            items = r.feed.items
+                            sourceOptions = sourceOptions,
+                            selectedSourceKeys = selectedSourceKeys,
+                            items = filterItemsBySources(r.feed.items, selectedSourceKeys)
                         )
                     }
                 }
             }
+        }
+    }
+
+    fun toggleSource(key: String) {
+        val feed = loadedFeed ?: return
+        _ui.update { current ->
+            val selected = current.selectedSourceKeys.toMutableSet()
+            if (!selected.add(key)) {
+                selected.remove(key)
+            }
+            current.copy(
+                selectedSourceKeys = selected,
+                items = filterItemsBySources(feed.items, selected)
+            )
+        }
+    }
+
+    fun selectAllSources() {
+        val feed = loadedFeed ?: return
+        _ui.update { current ->
+            val selected = current.sourceOptions.map { it.key }.toSet()
+            current.copy(
+                selectedSourceKeys = selected,
+                items = filterItemsBySources(feed.items, selected)
+            )
+        }
+    }
+
+    fun clearSourceSelection() {
+        val feed = loadedFeed ?: return
+        _ui.update {
+            it.copy(
+                selectedSourceKeys = emptySet(),
+                items = filterItemsBySources(feed.items, emptySet())
+            )
         }
     }
 
@@ -88,8 +146,12 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
     fun generateDigest(onReady: (Article) -> Unit) {
         if (_ui.value.isGenerating) return
         val feed = loadedFeed
-        if (feed == null || _ui.value.items.isEmpty()) {
+        if (feed == null) {
             _snackbar.value = "请先拉取资讯数据"
+            return
+        }
+        if (_ui.value.items.isEmpty()) {
+            _snackbar.value = "请至少选择一个包含资讯的来源"
             return
         }
         val apiKey = userSettingsStore.getDeepSeekApiKey()
@@ -115,14 +177,15 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
         viewModelScope.launch {
             val digestTitle = buildDigestTitle(feed.windowHours)
             val digestAuthor = "AI 资讯摘要 · DeepSeek"
-            val attributionBlock = buildAttributionMarkdown(feed, lines.lines().size)
+            val selectedLineCount = lines.lines().size
+            val attributionBlock = buildAttributionMarkdown(feed, selectedLineCount)
 
             when (
                 val result = DeepSeekApi.writeAiNewsDigestMarkdown(
                     apiKey = apiKey,
                     feedGeneratedAt = feed.generatedAt,
                     windowHours = feed.windowHours,
-                    itemCount = feed.totalItems,
+                    itemCount = selectedLineCount,
                     inputLines = lines
                 )
             ) {
@@ -131,8 +194,9 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
                     _snackbar.value = result.message
                 }
                 is DeepSeekApi.Result.Success -> {
+                    val normalizedDigest = AiNewsDigestMarkdownSanitizer.normalize(result.markdown.trim())
                     val fullMarkdown = buildString {
-                        append(result.markdown.trim())
+                        append(normalizedDigest)
                         append("\n\n---\n\n")
                         append(attributionBlock)
                     }
@@ -152,13 +216,46 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
 
     private fun formatItemLine(index: Int, item: AiNewsItem): String {
         val title = item.displayTitle()
-        val site = listOf(item.siteName, item.source)
+        val site = sourceLabel(item)
+        val time = item.publishedAt?.let { " · $it" }.orEmpty()
+        return "$index. $title | $site$time | ${item.url}"
+    }
+
+    private fun buildSourceOptions(items: List<AiNewsItem>): List<SourceFilterOption> {
+        return items
+            .groupingBy { sourceKey(it) to sourceLabel(it) }
+            .eachCount()
+            .map { (source, count) ->
+                SourceFilterOption(
+                    key = source.first,
+                    label = source.second,
+                    count = count
+                )
+            }
+            .sortedWith(compareByDescending<SourceFilterOption> { it.count }.thenBy { it.label })
+    }
+
+    private fun filterItemsBySources(items: List<AiNewsItem>, selectedSourceKeys: Set<String>): List<AiNewsItem> {
+        if (selectedSourceKeys.isEmpty()) return emptyList()
+        return items.filter { sourceKey(it) in selectedSourceKeys }
+    }
+
+    private fun sourceKey(item: AiNewsItem): String {
+        return listOf(item.siteName, item.source)
+            .map { it.trim().lowercase(Locale.ROOT) }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .joinToString("|")
+            .ifBlank { "unknown" }
+    }
+
+    private fun sourceLabel(item: AiNewsItem): String {
+        return listOf(item.siteName, item.source)
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
             .joinToString(" · ")
-        val time = item.publishedAt?.let { " · $it" }.orEmpty()
-        return "$index. $title | $site$time | ${item.url}"
+            .ifBlank { "未知来源" }
     }
 
     private fun buildDigestTitle(windowHours: Int): String {
@@ -190,6 +287,8 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
         val isLoadingFeed: Boolean = false,
         val feedError: String? = null,
         val feedMeta: FeedMeta? = null,
+        val sourceOptions: List<SourceFilterOption> = emptyList(),
+        val selectedSourceKeys: Set<String> = emptySet(),
         val items: List<AiNewsItem> = emptyList(),
         val isGenerating: Boolean = false,
         val generateError: String? = null
@@ -199,5 +298,11 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
         val generatedAt: String,
         val windowHours: Int,
         val totalItems: Int
+    )
+
+    data class SourceFilterOption(
+        val key: String,
+        val label: String,
+        val count: Int
     )
 }
