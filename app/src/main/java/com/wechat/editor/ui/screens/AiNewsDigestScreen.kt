@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.wechat.editor.model.AiNewsItem
 import com.wechat.editor.model.Article
 import com.wechat.editor.viewmodel.AiNewsDigestViewModel
+import com.wechat.editor.viewmodel.AiNewsDigestViewModel.FeedBackend
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,12 +87,41 @@ fun AiNewsDigestScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = "接入开源数据「ai-news-aggregator」（GitHub Pages JSON），拉取标题列表后用 DeepSeek 生成公众号风格 Markdown 汇总。",
+                text = when (ui.feedBackend) {
+                    FeedBackend.AI_NEWS_AGGREGATOR ->
+                        "接入「ai-news-aggregator」GitHub Pages JSON，拉取标题列表后用 DeepSeek 生成公众号风格 Markdown 汇总。"
+                    FeedBackend.PERPS_NEWS ->
+                        "接入开源「Perps-news」仓库中的 news.json 快照，按时间窗口筛选标题后用 DeepSeek 生成股市与财经向 Markdown 汇总（上游为定时采集数据，以 JSON 更新时间为准）。"
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
             )
             Spacer(modifier = Modifier.height(12.dp))
 
+            Text(
+                text = "数据源",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilterChip(
+                    selected = ui.feedBackend == FeedBackend.AI_NEWS_AGGREGATOR,
+                    onClick = viewModel::setBackendAggregator,
+                    label = { Text("AI 科技聚合") }
+                )
+                FilterChip(
+                    selected = ui.feedBackend == FeedBackend.PERPS_NEWS,
+                    onClick = viewModel::setBackendPerpsNews,
+                    label = { Text("股市新闻 Perps") }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
