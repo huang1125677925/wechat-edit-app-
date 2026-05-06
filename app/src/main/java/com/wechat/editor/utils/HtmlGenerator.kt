@@ -500,6 +500,47 @@ object HtmlGenerator {
         }
     }
 
+    private val markdownLinkImagePattern = Regex(
+        "!\\[([^\\]]*)]\\(([^)]+)\\)|\\[([^\\]]+)]\\(([^)]+)\\)"
+    )
+
+    /**
+     * Temporarily replaces Markdown image/link syntax with placeholders so later `__bold__` parsing
+     * cannot corrupt URLs like `https://mp.weixin.qq.com/s?__biz=…`.
+     */
+    private fun protectMarkdownLinksAndImages(html: String): Pair<String, List<String>> {
+        val chunks = mutableListOf<String>()
+        val matches = markdownLinkImagePattern.findAll(html).map { m ->
+            val full = m.value
+            val replacement = if (full.startsWith("![")) {
+                val alt = m.groupValues[1]
+                val src = m.groupValues[2]
+                "<img src=\"$src\" alt=\"$alt\" />"
+            } else {
+                val text = m.groupValues[3]
+                val href = m.groupValues[4]
+                "<a href=\"$href\">$text</a>"
+            }
+            Triple(m.range.first, m.range.last, replacement)
+        }.sortedByDescending { it.first }
+
+        var out = html
+        for ((start, end, replacement) in matches) {
+            val token = "\uE000LINK${chunks.size}\uE001"
+            chunks.add(replacement)
+            out = out.replaceRange(start, end + 1, token)
+        }
+        return Pair(out, chunks)
+    }
+
+    private fun restoreMarkdownLinkPlaceholders(html: String, chunks: List<String>): String {
+        var out = html
+        for (i in chunks.indices) {
+            out = out.replace("\uE000LINK${i}\uE001", chunks[i])
+        }
+        return out
+    }
+
     fun convertMarkdownToHtml(markdown: String): String {
         var html = escapeHtml(markdown)
         // Blockquote lines start with `>`; escapeHtml turns `>` into `&gt;`, which must be undone here
@@ -516,6 +557,12 @@ object HtmlGenerator {
                 "<pre><code>$code</code></pre>"
             }
         }
+
+        // Links / images must be resolved before `__bold__` parsing: WeChat article URLs use
+        // `?__biz=...` and the pair `__` is otherwise mistaken for Markdown bold, corrupting
+        // hrefs (illegal links in the Official Account editor).
+        val (htmlWithLinkPlaceholders, linkHtmlChunks) = protectMarkdownLinksAndImages(html)
+        html = htmlWithLinkPlaceholders
 
         // Headings
         html = html.replace(Regex("^#{6}\\s+(.+)$", RegexOption.MULTILINE), "<h6>$1</h6>")
@@ -538,17 +585,7 @@ object HtmlGenerator {
         // Inline code
         html = html.replace(Regex("`([^`]+)`"), "<code>$1</code>")
 
-        // Links
-        html = html.replace(Regex("!\\[([^\\]]*)]\\(([^)]+)\\)")) { match ->
-            val alt = match.groupValues[1]
-            val src = match.groupValues[2]
-            "<img src=\"$src\" alt=\"$alt\" />"
-        }
-        html = html.replace(Regex("\\[([^\\]]+)]\\(([^)]+)\\)")) { match ->
-            val text = match.groupValues[1]
-            val href = match.groupValues[2]
-            "<a href=\"$href\">$text</a>"
-        }
+        html = restoreMarkdownLinkPlaceholders(html, linkHtmlChunks)
 
         // Horizontal rule
         html = html.replace(Regex("^(---|-{3,}|\\*{3,}|_{3,})$", RegexOption.MULTILINE), "<hr>")

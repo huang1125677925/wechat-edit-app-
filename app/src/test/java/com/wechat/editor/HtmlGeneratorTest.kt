@@ -57,6 +57,18 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `convertMarkdownToHtml does not treat __biz in mp.weixin link URL as markdown bold`() {
+        val md =
+            "[标题](https://mp.weixin.qq.com/s?__biz=MzAxOTcxNTIwNQ%3D%3D&amp;mid=1&amp;idx=1&amp;sn=x)"
+        val html = HtmlGenerator.convertMarkdownToHtml(md)
+        assertTrue(
+            "href must stay intact (no strong inside href)",
+            html.contains("href=\"https://mp.weixin.qq.com/s?__biz=")
+        )
+        assertTrue(!html.contains("</strong>biz"))
+    }
+
+    @Test
     fun `convertMarkdownToHtml handles italic`() {
         val html = HtmlGenerator.convertMarkdownToHtml("*italic text*")
         assertTrue("Should convert italic markdown", html.contains("<em>italic text</em>"))
