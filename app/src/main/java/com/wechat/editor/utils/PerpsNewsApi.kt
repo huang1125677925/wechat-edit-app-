@@ -17,6 +17,10 @@ import java.util.concurrent.TimeUnit
 /**
  * Fetches raw news from [gunksd/Perps-news](https://github.com/gunksd/Perps-news)
  * committed JSON ([news.json](https://raw.githubusercontent.com/gunksd/Perps-news/main/data/news.json)).
+ *
+ * The file is a periodically committed snapshot; its newest row can lag wall-clock by weeks or months.
+ * Time-window filtering therefore anchors to the newest parsed `time` in the snapshot when that anchor
+ * falls outside the requested window relative to "now", so 24h / 7d still returns rows from the snapshot.
  */
 object PerpsNewsApi {
 
@@ -53,7 +57,28 @@ object PerpsNewsApi {
                 val arr = runCatching { JSONArray(body) }.getOrElse {
                     return@use Result.Error("响应不是有效的 JSON 数组")
                 }
-                val cutoff = System.currentTimeMillis() - windowHours * 3_600_000L
+                val windowMs = windowHours * 3_600_000L
+                val now = System.currentTimeMillis()
+                // GitHub 上的 news.json 是定时提交的静态快照，可能比「当前时刻」滞后数月。
+                // 若仍用 wall-clock 做 cutoff，24h/7d 窗口会把快照内条目全部滤掉。此处用快照内
+                // 最新一条的时间作为参考点：仅当参考点仍足够「接近」当前时间时才用 now。
+                var latestInSnapshot: Long? = null
+                for (i in 0 until arr.length()) {
+                    val o = arr.optJSONObject(i) ?: continue
+                    val t = parseTimeMillis(o.optString("time"))
+                    if (t != null) {
+                        latestInSnapshot = when (val cur = latestInSnapshot) {
+                            null -> t
+                            else -> maxOf(cur, t)
+                        }
+                    }
+                }
+                val referenceMs = when {
+                    latestInSnapshot == null -> now
+                    latestInSnapshot < now - windowMs -> latestInSnapshot
+                    else -> now
+                }
+                val cutoff = referenceMs - windowMs
                 val items = buildList {
                     for (i in 0 until arr.length()) {
                         val o = arr.optJSONObject(i) ?: continue
