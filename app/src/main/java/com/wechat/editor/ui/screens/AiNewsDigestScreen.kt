@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -173,9 +174,21 @@ fun AiNewsDigestScreen(
             ui.feedMeta?.let { meta ->
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "数据：约 ${meta.totalItems} 条 · 窗口 ${meta.windowHours}h · 生成 ${meta.generatedAt}",
+                    text = "数据：约 ${meta.totalItems} 条 · 已选 ${ui.items.size} 条 · 窗口 ${meta.windowHours}h · 生成 ${meta.generatedAt}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            if (ui.sourceOptions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                SourceFilterSection(
+                    options = ui.sourceOptions,
+                    selectedKeys = ui.selectedSourceKeys,
+                    selectedItemCount = ui.items.size,
+                    onToggle = viewModel::toggleSource,
+                    onSelectAll = viewModel::selectAllSources,
+                    onClear = viewModel::clearSourceSelection
                 )
             }
 
@@ -232,6 +245,63 @@ fun AiNewsDigestScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SourceFilterSection(
+    options: List<AiNewsDigestViewModel.SourceFilterOption>,
+    selectedKeys: Set<String>,
+    selectedItemCount: Int,
+    onToggle: (String) -> Unit,
+    onSelectAll: () -> Unit,
+    onClear: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "来源筛选：${selectedKeys.size}/${options.size} 个来源 · $selectedItemCount 条",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(
+                    onClick = onSelectAll,
+                    enabled = selectedKeys.size != options.size
+                ) {
+                    Text("全选")
+                }
+                OutlinedButton(
+                    onClick = onClear,
+                    enabled = selectedKeys.isNotEmpty()
+                ) {
+                    Text("清空")
+                }
+            }
+        }
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(end = 4.dp)
+        ) {
+            items(options) { option ->
+                FilterChip(
+                    selected = option.key in selectedKeys,
+                    onClick = { onToggle(option.key) },
+                    label = {
+                        Text(
+                            text = "${option.label} (${option.count})",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                )
             }
         }
     }
