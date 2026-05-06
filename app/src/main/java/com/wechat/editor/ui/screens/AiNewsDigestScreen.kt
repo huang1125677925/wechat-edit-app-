@@ -91,7 +91,7 @@ fun AiNewsDigestScreen(
                     FeedBackend.AI_NEWS_AGGREGATOR ->
                         "接入「ai-news-aggregator」GitHub Pages JSON，拉取标题列表后用 DeepSeek 生成公众号风格 Markdown 汇总。"
                     FeedBackend.PERPS_NEWS ->
-                        "接入开源「Perps-news」仓库中的 news.json 快照，按时间窗口筛选标题后用 DeepSeek 生成股市与财经向 Markdown 汇总（上游为定时采集数据，以 JSON 更新时间为准）。"
+                        "接入开源「Perps-news」仓库：拉取 data/news.json 中的财经新闻标题，并附带同仓库 data/indices.json 的指数快照作为模型上下文；按时间窗口筛选后用 DeepSeek 生成股市与财经向 Markdown 汇总（上游为定时采集与提交，以 JSON 内容为准）。"
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)

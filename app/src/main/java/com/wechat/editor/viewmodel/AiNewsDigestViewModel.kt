@@ -249,7 +249,8 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
                     feedGeneratedAt = feed.generatedAt,
                     windowHours = feed.windowHours,
                     itemCount = selectedLineCount,
-                    inputLines = lines
+                    inputLines = lines,
+                    extraContext = feed.perpsContext
                 )
             }
 
@@ -352,10 +353,11 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
         }
         FeedBackend.PERPS_NEWS -> buildString {
             append("**数据来源**：开源项目 [gunksd/Perps-news](https://github.com/gunksd/Perps-news) ")
-            append("（[JSON 快照](${PerpsNewsApi.NEWS_JSON_URL})）。")
-            append("本页按最近 **${feed.windowHours}** 小时从快照中筛选；筛选后条目数：**${feed.totalItems}**；")
+            append("（[新闻快照 news.json](${PerpsNewsApi.NEWS_JSON_URL}) · ")
+            append("[指数快照 indices.json](${PerpsNewsApi.INDICES_JSON_URL})）。")
+            append("本页按最近 **${feed.windowHours}** 小时从新闻快照中筛选；筛选后条目数：**${feed.totalItems}**；")
             append("正文生成依据约 **$lineCount** 条标题链接；整理时间戳：`${feed.generatedAt}`。\n\n")
-            append("**说明**：正文由 DeepSeek 根据标题归纳撰写，不构成投资建议；细节与数据请以原文链接为准。")
+            append("**说明**：正文由 DeepSeek 根据标题归纳撰写，不构成投资建议；指数块为仓库静态快照，细节与数据请以原文链接为准。")
         }
     }
 
