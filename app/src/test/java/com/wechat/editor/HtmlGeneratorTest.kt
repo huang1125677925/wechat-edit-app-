@@ -160,4 +160,31 @@ class HtmlGeneratorTest {
         val styled = HtmlGenerator.applyWeChatInlineStyles("<ul><li>a</li></ul>", layout)
         assertTrue(styled.contains("margin:4px 0 8px 24px"))
     }
+
+    @Test
+    fun `applyWeChatInlineStyles expands br inside p into separate p elements`() {
+        // A single <p> with <br/> should become multiple <p> elements (no <br/> in output)
+        val html = HtmlGenerator.convertMarkdownToHtml("第一行\n第二行\n第三行")
+        val styled = HtmlGenerator.applyWeChatInlineStyles(html, defaultLayout)
+        assertTrue("Should not contain <br/> after expansion", !styled.contains("<br/>"))
+        assertTrue("Should contain multiple <p> tags", styled.split("<p ").size >= 4)
+    }
+
+    @Test
+    fun `generateWeChatPasteHtml soft line breaks produce no br tags`() {
+        // Lines joined by a single newline (soft break) must not appear as <br/> in WeChat paste HTML
+        val html = HtmlGenerator.generateWeChatPasteHtml("行一\n行二\n行三", defaultLayout, "", "")
+        assertTrue("WeChat paste HTML should not contain <br/> to avoid blank lines", !html.contains("<br/>"))
+    }
+
+    @Test
+    fun `applyWeChatInlineStyles preserves paragraph gap on last br-split line only`() {
+        val layout = defaultLayout.copy(paragraphSpacing = 10)
+        val input = """<p style="margin:0 0 8px;text-align:justify;">A<br/>B</p>"""
+        val styled = HtmlGenerator.applyWeChatInlineStyles(input, layout)
+        // First line should have margin:0
+        assertTrue("First split line should have margin:0", styled.contains("""<p style="margin:0;"""))
+        // Last line should keep block gap margin
+        assertTrue("Last split line should have gap margin", styled.contains("""<p style="margin:0 0 8px;"""))
+    }
 }
