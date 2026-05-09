@@ -565,10 +565,136 @@ object HtmlGenerator {
 
         html = restoreProtectedMarkdownLinks(html, protectedLinks)
 
+        // GFM pipe tables (must run before paragraph merge, otherwise rows become <p>…<br/>… raw text).
+        html = convertPipeTablesToHtml(html)
+
         // Paragraphs: merge Markdown "soft breaks" (single newline) into one <p> with <br/>,
         // and only start a new paragraph after a blank line (Markdown paragraph semantics).
         // Wrapping every physical line in its own <p> caused stacked margins in WeChat (looks like extra blank lines).
         return mergeSoftBreakParagraphs(html)
+    }
+
+    /**
+     * Converts GitHub-flavored Markdown pipe tables to a single-line HTML [table] block so
+     * [mergeSoftBreakParagraphs] treats them as block-level (also fixes tables with no blank line after a heading).
+     */
+    internal fun convertPipeTablesToHtml(html: String): String {
+        val preChunks = mutableListOf<String>()
+        var preIdx = 0
+        val withPreMarkers = Regex("<pre>[\\s\\S]*?</pre>").replace(html) { m ->
+            val token = "\uE000${preIdx++}\uE001"
+            preChunks.add(m.value)
+            token
+        }
+        val lines = withPreMarkers.split("\n")
+        val out = StringBuilder()
+        var i = 0
+        while (i < lines.size) {
+            val nextLine = lines.getOrNull(i + 1)
+            if (nextLine != null &&
+                isPipeTableHeaderRow(lines[i]) &&
+                isPipeTableSeparatorRow(nextLine)
+            ) {
+                val (tableHtml, endExclusive) = buildPipeTableHtml(lines, i)
+                out.append(tableHtml).append('\n')
+                i = endExclusive
+            } else {
+                out.append(lines[i]).append('\n')
+                i++
+            }
+        }
+        var result = out.toString().trimEnd('\n')
+        for (j in preChunks.indices) {
+            result = result.replace("\uE000$j\uE001", preChunks[j])
+        }
+        return result
+    }
+
+    private fun isPipeTableSeparatorRow(line: String): Boolean {
+        val t = line.trim()
+        if (!t.contains('|')) return false
+        val cells = splitPipeTableCells(t)
+        if (cells.isEmpty()) return false
+        return cells.all { cell ->
+            cell.trim().matches(Regex("^:?-{3,}:?$"))
+        }
+    }
+
+    private fun isPipeTableHeaderRow(line: String): Boolean {
+        val t = line.trim()
+        if (!t.contains('|')) return false
+        if (isPipeTableSeparatorRow(line)) return false
+        return splitPipeTableCells(t).isNotEmpty()
+    }
+
+    private fun splitPipeTableCells(line: String): List<String> {
+        var t = line.trim()
+        if (t.isEmpty()) return emptyList()
+        val hadLeading = t.startsWith('|')
+        val hadTrailing = t.endsWith('|')
+        if (hadLeading) t = t.substring(1)
+        if (hadTrailing && t.isNotEmpty()) t = t.dropLast(1)
+        if (t.isEmpty()) {
+            return if (hadLeading || hadTrailing) listOf("") else emptyList()
+        }
+        return t.split('|').map { it.trim() }
+    }
+
+    private fun pipeTableCellAlignment(separatorCell: String): String {
+        val s = separatorCell.trim()
+        if (!s.matches(Regex("^:?-+:?+$"))) return "left"
+        val hasLeft = s.startsWith(':')
+        val hasRight = s.endsWith(':')
+        return when {
+            hasLeft && hasRight -> "center"
+            hasRight -> "right"
+            else -> "left"
+        }
+    }
+
+    private fun pipeTableAlignStyle(align: String): String = when (align) {
+        "center" -> "text-align:center;"
+        "right" -> "text-align:right;"
+        else -> "text-align:left;"
+    }
+
+    /**
+     * @return Pair(tableHtmlOneLine, indexAfterLastConsumedLine)
+     */
+    private fun buildPipeTableHtml(lines: List<String>, start: Int): Pair<String, Int> {
+        val headerCells = splitPipeTableCells(lines[start].trim())
+        val sepCells = splitPipeTableCells(lines[start + 1].trim())
+        val colCount = maxOf(headerCells.size, sepCells.size)
+        val aligns = (0 until colCount).map { c ->
+            pipeTableCellAlignment(sepCells.getOrNull(c) ?: "---")
+        }
+        val sb = StringBuilder("<table><thead><tr>")
+        for (c in 0 until colCount) {
+            val cell = headerCells.getOrNull(c)?.trim().orEmpty()
+            sb.append("<th style=\"").append(pipeTableAlignStyle(aligns[c])).append("\">")
+            sb.append(cell)
+            sb.append("</th>")
+        }
+        sb.append("</tr></thead><tbody>")
+        var k = start + 2
+        while (k < lines.size) {
+            val raw = lines[k]
+            if (raw.trim().isEmpty()) break
+            if (!raw.trim().contains('|')) break
+            if (isPipeTableSeparatorRow(raw)) break
+            val rowCells = splitPipeTableCells(raw.trim())
+            sb.append("<tr>")
+            for (c in 0 until colCount) {
+                val cell = rowCells.getOrNull(c)?.trim().orEmpty()
+                sb.append("<td style=\"").append(pipeTableAlignStyle(aligns[c])).append("\">")
+                sb.append(cell)
+                sb.append("</td>")
+            }
+            sb.append("</tr>")
+            k++
+        }
+        sb.append("</tbody></table>")
+        return Pair(sb.toString(), k)
     }
 
     private fun protectMarkdownLinks(html: String, protectedLinks: MutableList<String>): String {
