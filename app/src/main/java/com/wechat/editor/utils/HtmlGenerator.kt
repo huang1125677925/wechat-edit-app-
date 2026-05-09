@@ -637,7 +637,11 @@ object HtmlGenerator {
         if (t.isEmpty()) {
             return if (hadLeading || hadTrailing) listOf("") else emptyList()
         }
-        return t.split('|').map { it.trim() }
+        // Leading/trailing "|" in the row body yields empty segments; GFM ignores those.
+        return t.split('|')
+            .map { it.trim() }
+            .dropWhile { it.isEmpty() }
+            .dropLastWhile { it.isEmpty() }
     }
 
     private fun pipeTableCellAlignment(separatorCell: String): String {

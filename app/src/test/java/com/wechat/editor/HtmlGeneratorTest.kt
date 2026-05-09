@@ -117,7 +117,7 @@ class HtmlGeneratorTest {
 
     @Test
     fun `convertMarkdownToHtml renders GFM pipe tables`() {
-        val md = "| A | B |\n|:-:|:-:|\n| 1 | 2 |"
+        val md = "| A | B |\n|:---:|:---:|\n| 1 | 2 |"
         val html = HtmlGenerator.convertMarkdownToHtml(md)
         assertTrue(html.contains("<table><thead><tr>"))
         assertTrue(html.contains("""<th style="text-align:center;">A</th>"""))
@@ -128,7 +128,7 @@ class HtmlGeneratorTest {
 
     @Test
     fun `convertMarkdownToHtml renders pipe table flush after bold without blank line`() {
-        val md = "**五、月度趋势**\n| 月份 | c |\n|:-:|:-:|\n| 2025/11 | x |"
+        val md = "**五、月度趋势**\n| 月份 | c |\n|:---:|:---:|\n| 2025/11 | x |"
         val html = HtmlGenerator.convertMarkdownToHtml(md)
         assertTrue(html.contains("<table><thead>"))
         assertTrue("pipe row must not be merged into a single paragraph", !html.contains("<p>| 月份 |"))
