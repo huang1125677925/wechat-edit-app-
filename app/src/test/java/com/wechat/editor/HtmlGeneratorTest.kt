@@ -116,6 +116,34 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `convertMarkdownToHtml renders GFM pipe tables`() {
+        val md = "| A | B |\n|:---:|:---:|\n| 1 | 2 |"
+        val html = HtmlGenerator.convertMarkdownToHtml(md)
+        assertTrue(html.contains("<table><thead><tr>"))
+        assertTrue(html.contains("""<th style="text-align:center;">A</th>"""))
+        assertTrue(html.contains("""<th style="text-align:center;">B</th>"""))
+        assertTrue(html.contains("""<td style="text-align:center;">1</td>"""))
+        assertTrue("pipe header must not remain as paragraph markdown", !html.contains("<p>| A | B |"))
+    }
+
+    @Test
+    fun `convertMarkdownToHtml renders pipe table flush after bold without blank line`() {
+        val md = "**五、月度趋势**\n| 月份 | c |\n|:---:|:---:|\n| 2025/11 | x |"
+        val html = HtmlGenerator.convertMarkdownToHtml(md)
+        assertTrue(html.contains("<table><thead>"))
+        assertTrue("pipe row must not be merged into a single paragraph", !html.contains("<p>| 月份 |"))
+        assertTrue(html.contains("<strong>五、月度趋势</strong>"))
+    }
+
+    @Test
+    fun `convertMarkdownToHtml renders pipe table flush after markdown heading`() {
+        val md = "### 六、TOP\n| a | b |\n|----------|----------|\n| 1 | 2 |"
+        val html = HtmlGenerator.convertMarkdownToHtml(md)
+        assertTrue(html.contains("<h3>六、TOP</h3>"))
+        assertTrue(html.contains("<table><thead>"))
+    }
+
+    @Test
     fun `mergeSoftBreakParagraphs preserves multiline pre blocks`() {
         val inner = "line a\nline b"
         val html = HtmlGenerator.mergeSoftBreakParagraphs("<pre><code>$inner</code></pre>")
