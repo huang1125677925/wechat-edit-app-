@@ -144,6 +144,33 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `convertMarkdownToHtml renders compact AI generated stock table`() {
+        val md = """
+            |行业 | 涨停次数 | 涉及个股 | 占比 | 日均涨停 |
+            |:---|-------:|------:|---:|--------:|
+            |🔧 通用设备 |371|116只|4.6%|3.4次|
+            |⚡ 电网设备 |351|82只|4.3%|3.3次|
+        """.trimIndent()
+
+        val html = HtmlGenerator.convertMarkdownToHtml(md)
+
+        assertTrue(html.contains("<table><thead><tr>"))
+        assertTrue(html.contains("<th style=\"text-align:left;\">行业</th>"))
+        assertTrue(html.contains("<td style=\"text-align:right;\">371</td>"))
+        assertTrue("stock table markdown should not remain as paragraph text", !html.contains("|行业 |"))
+    }
+
+    @Test
+    fun `convertMarkdownToHtml accepts permissive table separators and full width pipes`() {
+        val md = "\u200B｜行业｜次数｜\n｜:-｜-:｜\n｜通用设备｜371｜"
+        val html = HtmlGenerator.convertMarkdownToHtml(md)
+
+        assertTrue(html.contains("<table><thead><tr>"))
+        assertTrue(html.contains("<th style=\"text-align:left;\">行业</th>"))
+        assertTrue(html.contains("<td style=\"text-align:right;\">371</td>"))
+    }
+
+    @Test
     fun `generateWeChatPasteHtml renders Chinese emoji pipe table with inline cell borders`() {
         val md = """
             ### 四、高连板（2进3+）强势行业

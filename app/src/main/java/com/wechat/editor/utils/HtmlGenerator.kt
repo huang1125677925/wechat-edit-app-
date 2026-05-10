@@ -652,24 +652,36 @@ object HtmlGenerator {
     }
 
     private fun isPipeTableSeparatorRow(line: String): Boolean {
-        val t = line.trim()
+        val t = normalizePipeTableLine(line)
         if (!t.contains('|')) return false
         val cells = splitPipeTableCells(t)
         if (cells.isEmpty()) return false
         return cells.all { cell ->
-            cell.trim().matches(Regex("^:?-{3,}:?$"))
+            cell.trim().matches(Regex("^:?-+:?$"))
         }
     }
 
     private fun isPipeTableHeaderRow(line: String): Boolean {
-        val t = line.trim()
+        val t = normalizePipeTableLine(line)
         if (!t.contains('|')) return false
         if (isPipeTableSeparatorRow(line)) return false
         return splitPipeTableCells(t).isNotEmpty()
     }
 
+    private fun normalizePipeTableLine(line: String): String {
+        return line
+            .replace("\uFEFF", "")
+            .replace("\u200B", "")
+            .replace("\u200C", "")
+            .replace("\u200D", "")
+            .replace('｜', '|')
+            .replace('：', ':')
+            .replace('－', '-')
+            .trim()
+    }
+
     private fun splitPipeTableCells(line: String): List<String> {
-        var t = line.trim()
+        var t = normalizePipeTableLine(line)
         if (t.isEmpty()) return emptyList()
         val hadLeading = t.startsWith('|')
         val hadTrailing = t.endsWith('|')
@@ -707,8 +719,8 @@ object HtmlGenerator {
      * @return Pair(tableHtmlOneLine, indexAfterLastConsumedLine)
      */
     private fun buildPipeTableHtml(lines: List<String>, start: Int): Pair<String, Int> {
-        val headerCells = splitPipeTableCells(lines[start].trim())
-        val sepCells = splitPipeTableCells(lines[start + 1].trim())
+        val headerCells = splitPipeTableCells(lines[start])
+        val sepCells = splitPipeTableCells(lines[start + 1])
         val colCount = maxOf(headerCells.size, sepCells.size)
         val aligns = (0 until colCount).map { c ->
             pipeTableCellAlignment(sepCells.getOrNull(c) ?: "---")
@@ -724,10 +736,11 @@ object HtmlGenerator {
         var k = start + 2
         while (k < lines.size) {
             val raw = lines[k]
-            if (raw.trim().isEmpty()) break
-            if (!raw.trim().contains('|')) break
+            val normalized = normalizePipeTableLine(raw)
+            if (normalized.isEmpty()) break
+            if (!normalized.contains('|')) break
             if (isPipeTableSeparatorRow(raw)) break
-            val rowCells = splitPipeTableCells(raw.trim())
+            val rowCells = splitPipeTableCells(raw)
             sb.append("<tr>")
             for (c in 0 until colCount) {
                 val cell = rowCells.getOrNull(c)?.trim().orEmpty()
