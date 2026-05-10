@@ -170,14 +170,7 @@ object HtmlGenerator {
             "<table>",
             "<table style=\"width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;\">"
         )
-        s = s.replace(
-            "<th>",
-            "<th style=\"border:1px solid #e0e0e0;padding:8px 12px;text-align:left;background-color:#f5f5f5;font-weight:bold;\">"
-        )
-        s = s.replace(
-            "<td>",
-            "<td style=\"border:1px solid #e0e0e0;padding:8px 12px;text-align:left;\">"
-        )
+        s = inlineTableCellStyles(s)
         // Inline code only (not inside pre — those were rewritten to include style on opening code)
         val inlineCodeBg = layout.pasteCodeBackground ?: "#f0f0f0"
         val inlineCodeFg = layout.pasteCodeForeground ?: "#e74c3c"
@@ -186,6 +179,37 @@ object HtmlGenerator {
             "<code style=\"font-family:'Courier New',Courier,monospace;font-size:14px;background-color:$inlineCodeBg;color:$inlineCodeFg;padding:2px 6px;border-radius:3px;\">"
         )
         return s
+    }
+
+    private fun inlineTableCellStyles(html: String): String {
+        fun mergeStyle(existing: String, base: String): String {
+            val baseStyle = if (existing.contains("text-align:", ignoreCase = true)) {
+                base.replace("text-align:left;", "")
+            } else {
+                base
+            }
+            return if (existing.isBlank()) {
+                baseStyle
+            } else {
+                "$baseStyle$existing"
+            }
+        }
+
+        var out = html.replace(Regex("""<th(?:\s+style="([^"]*)")?>""")) { match ->
+            val style = mergeStyle(
+                match.groupValues.getOrNull(1).orEmpty(),
+                "border:1px solid #e0e0e0;padding:8px 12px;text-align:left;background-color:#f5f5f5;font-weight:bold;"
+            )
+            """<th style="$style">"""
+        }
+        out = out.replace(Regex("""<td(?:\s+style="([^"]*)")?>""")) { match ->
+            val style = mergeStyle(
+                match.groupValues.getOrNull(1).orEmpty(),
+                "border:1px solid #e0e0e0;padding:8px 12px;text-align:left;"
+            )
+            """<td style="$style">"""
+        }
+        return out
     }
 
     /**

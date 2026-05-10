@@ -144,6 +144,58 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `generateWeChatPasteHtml renders Chinese emoji pipe table with inline cell borders`() {
+        val md = """
+            ### 四、高连板（2进3+）强势行业
+
+            | 行业 | 2进3+次数 | 特点 |
+            |:---|:--------:|:----|
+            | ⚡ 电网设备 | **21** | 全阶段通吃，最均衡 |
+            | 🎬 文化传媒 | **16** | 连板龙头摇篮 |
+            | 📡 通信设备 | **15** | 科技线代表 |
+            | ⚡ 电力 | **13** | 3月主线 |
+            | 🔧 通用设备 | **13** | 常青树 |
+
+            **电网设备**是唯一在**首板、1进2、2进3+**都稳居前3的行业，攻守兼备型选手。
+        """.trimIndent()
+
+        val html = HtmlGenerator.generateWeChatPasteHtml(md, defaultLayout, "", "")
+
+        assertTrue(html.contains("<table style=\"width:100%;border-collapse:collapse"))
+        assertTrue(html.contains("⚡ 电网设备"))
+        assertTrue(html.contains("<strong style="))
+        assertTrue(html.contains("""<th style="border:1px solid #e0e0e0;padding:8px 12px;background-color:#f5f5f5;font-weight:bold;text-align:center;">2进3+次数</th>"""))
+        assertTrue(html.contains("""<td style="border:1px solid #e0e0e0;padding:8px 12px;text-align:center;"><strong"""))
+        assertTrue("pipe table markdown should not remain as paragraph text", !html.contains("| 行业 |"))
+    }
+
+    @Test
+    fun `generateHtml preview renders Chinese emoji pipe table`() {
+        val md = """
+            ### 四、高连板（2进3+）强势行业
+
+            | 行业 | 2进3+次数 | 特点 |
+            |:---|:--------:|:----|
+            | ⚡ 电网设备 | **21** | 全阶段通吃，最均衡 |
+            | 🎬 文化传媒 | **16** | 连板龙头摇篮 |
+            | 📡 通信设备 | **15** | 科技线代表 |
+            | ⚡ 电力 | **13** | 3月主线 |
+            | 🔧 通用设备 | **13** | 常青树 |
+
+            **电网设备**是唯一在**首板、1进2、2进3+**都稳居前3的行业，攻守兼备型选手。
+        """.trimIndent()
+
+        val html = HtmlGenerator.generateHtml(md, defaultLayout, "", "")
+
+        assertTrue(html.contains("<h3>四、高连板（2进3+）强势行业</h3>"))
+        assertTrue(html.contains("<table><thead><tr>"))
+        assertTrue(html.contains("""<th style="text-align:center;">2进3+次数</th>"""))
+        assertTrue(html.contains("""<td style="text-align:center;"><strong>21</strong></td>"""))
+        assertTrue(html.contains("攻守兼备型选手"))
+        assertTrue("pipe table markdown should not remain in preview", !html.contains("| 行业 |"))
+    }
+
+    @Test
     fun `mergeSoftBreakParagraphs preserves multiline pre blocks`() {
         val inner = "line a\nline b"
         val html = HtmlGenerator.mergeSoftBreakParagraphs("<pre><code>$inner</code></pre>")

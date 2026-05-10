@@ -273,7 +273,7 @@ fun EditorScreen(
                             Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
                                 if (contentValue.text.isEmpty()) {
                                     Text(
-                                        "开始编写您的文章内容...\n\n支持Markdown语法：\n• **粗体** *斜体* ~~删除线~~\n• # 标题1  ## 标题2  ### 标题3\n• - 无序列表  1. 有序列表\n• > 引用块\n• ```代码块```\n• [链接文字](URL)\n• ![图片描述](图片URL)",
+                                        "开始编写您的文章内容...\n\n支持Markdown语法：\n• **粗体** *斜体* ~~删除线~~\n• # 标题1  ## 标题2  ### 标题3\n• - 无序列表  1. 有序列表\n• > 引用块\n• | 表头 | 表头 | 管道表格\n• ```代码块```\n• [链接文字](URL)\n• ![图片描述](图片URL)",
                                         fontSize = 16.sp,
                                         lineHeight = 28.sp,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
