@@ -57,7 +57,7 @@ object HtmlGenerator {
         val authorBlock = if (author.isNotBlank()) {
             """<p style="font-size:14px;color:${layout.subtitleColor};margin:0 0 20px;padding-bottom:16px;border-bottom:1px solid #eeeeee;">作者：${escapeHtml(author)}</p>"""
         } else ""
-        return buildString {
+        return compactWeChatPasteHtml(buildString {
             append(
                 """<section style="box-sizing:border-box;max-width:${layout.contentMaxWidth}px;margin:0 auto;padding:20px 16px 40px;font-family:$ff;background-color:${layout.backgroundColor};color:${layout.textColor};font-size:${layout.baseFontSize}px;line-height:${layout.lineHeight};">"""
             )
@@ -65,7 +65,7 @@ object HtmlGenerator {
             append(authorBlock)
             append(styledBody)
             append("</section>")
-        }
+        })
     }
 
     internal fun applyWeChatInlineStyles(html: String, layout: LayoutSettings): String {
@@ -202,10 +202,11 @@ object HtmlGenerator {
         return pWithStyle.replace(html) { match ->
             val styleAttr = match.groupValues[1]
             val inner = match.groupValues[2]
-            if (!inner.contains("<br/>")) {
+            val brRegex = Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE)
+            if (!brRegex.containsMatchIn(inner)) {
                 match.value
             } else {
-                val parts = inner.split("<br/>")
+                val parts = inner.split(brRegex)
                 val sb = StringBuilder()
                 for ((index, part) in parts.withIndex()) {
                     val isLast = index == parts.size - 1
@@ -224,11 +225,27 @@ object HtmlGenerator {
                         if (lineIndent.isNotEmpty()) append(lineIndent)
                     }
                     sb.append("""<p style="$newStyle">$part</p>""")
-                    if (!isLast) sb.append('\n')
                 }
                 sb.toString()
             }
         }
+    }
+
+    internal fun compactWeChatPasteHtml(html: String): String {
+        val preChunks = mutableListOf<String>()
+        var idx = 0
+        val withMarkers = Regex("""<pre\b[\s\S]*?</pre>""", RegexOption.IGNORE_CASE).replace(html) { m ->
+            val token = "<wechat-pre-placeholder data-index=\"${idx++}\"></wechat-pre-placeholder>"
+            preChunks.add(m.value)
+            token
+        }
+        var compacted = withMarkers
+            .replace(Regex(""">\s+<"""), "><")
+            .trim()
+        for (i in preChunks.indices) {
+            compacted = compacted.replace("<wechat-pre-placeholder data-index=\"$i\"></wechat-pre-placeholder>", preChunks[i])
+        }
+        return compacted
     }
 
     fun generateCss(layout: LayoutSettings): String {

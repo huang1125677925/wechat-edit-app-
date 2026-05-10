@@ -233,6 +233,32 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `generateWeChatPasteHtml removes inter-block newlines that WeChat may turn into gaps`() {
+        val html = HtmlGenerator.generateWeChatPasteHtml("第一段\n\n第二段", defaultLayout, "标题", "作者")
+
+        assertTrue("Paste HTML should not contain whitespace text nodes between tags", !Regex(""">\s+<""").containsMatchIn(html))
+        assertTrue(html.contains(">第一段</p><p"))
+    }
+
+    @Test
+    fun `applyWeChatInlineStyles expands br tag variants inside paragraphs`() {
+        val styled = HtmlGenerator.applyWeChatInlineStyles("<p>A<br>B<br />C</p>", defaultLayout)
+
+        assertTrue("Should remove <br> variant", !styled.contains("<br>"))
+        assertTrue("Should remove <br /> variant", !styled.contains("<br />"))
+        assertTrue("Should split into consecutive styled paragraphs", styled.contains(">A</p><p"))
+    }
+
+    @Test
+    fun `compactWeChatPasteHtml preserves code newlines but removes whitespace around pre`() {
+        val html = HtmlGenerator.generateWeChatPasteHtml("前文\n\n```kotlin\nval a = 1\nval b = 2\n```\n\n后文", defaultLayout, "", "")
+
+        assertTrue("Code block line breaks should be preserved", html.contains("val a = 1\nval b = 2"))
+        assertTrue("Whitespace before pre should be removed", !html.contains("</p>\n<pre"))
+        assertTrue("Whitespace after pre should be removed", !html.contains("</pre>\n<p"))
+    }
+
+    @Test
     fun `applyWeChatInlineStyles wraps li content in zero-margin p to prevent WeChat blank lines`() {
         val html = HtmlGenerator.convertMarkdownToHtml("- 项目一\n- 项目二\n- 项目三")
         val styled = HtmlGenerator.applyWeChatInlineStyles(html, defaultLayout)
