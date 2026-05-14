@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
@@ -20,7 +21,6 @@ import androidx.compose.ui.unit.sp
 import com.wechat.editor.model.ArticleTemplate
 import com.wechat.editor.ui.screens.PreviewPanel
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.snapshotFlow
 
 /**
  * Horizontal pager of live HTML previews — one page per [ArticleTemplate], using the current
