@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -37,7 +36,6 @@ import androidx.compose.material.icons.filled.HorizontalRule
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertLink
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -80,7 +78,7 @@ fun FormatToolbar(
             contentColor = MaterialTheme.colorScheme.primary,
             edgePadding = 0.dp
         ) {
-            val tabs = listOf("格式", "段落", "插入", "模板")
+            val tabs = listOf("格式", "段落", "插入")
             tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTab.ordinal == index,
@@ -107,7 +105,6 @@ fun FormatToolbar(
                 EditorTab.FORMAT -> FormatTab(viewModel)
                 EditorTab.PARAGRAPH -> ParagraphTab(viewModel)
                 EditorTab.INSERT -> InsertTab(viewModel, isDeepSeekBusy)
-                EditorTab.TEMPLATE -> TemplateTab(viewModel)
             }
         }
     }
@@ -263,6 +260,9 @@ private fun InsertTab(viewModel: EditorViewModel, isDeepSeekBusy: Boolean) {
         ToolbarIconButton(icon = Icons.Default.Code, label = "代码块") {
             viewModel.insertCodeBlock()
         }
+        ToolbarTextButton(text = "代码片段") {
+            viewModel.showCodeSnippetDialog()
+        }
         ToolbarDivider()
         ToolbarTextButton(text = "阅读原文") {
             viewModel.insertMarkdown("\n[阅读原文](https://mp.weixin.qq.com)\n")
@@ -270,29 +270,6 @@ private fun InsertTab(viewModel: EditorViewModel, isDeepSeekBusy: Boolean) {
         ToolbarTextButton(text = "关注我们") {
             viewModel.insertMarkdown("\n---\n**关注我们**，获取更多精彩内容。\n")
         }
-    }
-}
-
-@Composable
-private fun TemplateTab(viewModel: EditorViewModel) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        ToolbarIconButton(icon = Icons.Default.Style, label = "选择模板") {
-            viewModel.showTemplateDialog()
-        }
-        ToolbarDivider()
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = "点击选择模板以快速应用排版风格",
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-        )
     }
 }
 

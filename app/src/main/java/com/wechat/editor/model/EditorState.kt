@@ -17,7 +17,7 @@ data class EditorState(
     val showParagraphSettingsDialog: Boolean = false,
     val showLinkDialog: Boolean = false,
     val showImageDialog: Boolean = false,
-    val showTemplateDialog: Boolean = false,
+    val showCodeSnippetDialog: Boolean = false,
     val isUploadingImage: Boolean = false,
     val uploadProgress: String = "",
     val isDeepSeekPolishing: Boolean = false,
@@ -26,7 +26,7 @@ data class EditorState(
 )
 
 enum class EditorTab {
-    FORMAT, PARAGRAPH, INSERT, TEMPLATE
+    FORMAT, PARAGRAPH, INSERT
 }
 
 enum class ColorPickerTarget {
