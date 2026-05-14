@@ -49,13 +49,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.wechat.editor.model.ColorPickerTarget
+import com.wechat.editor.ui.components.ArticleTemplatePreviewSection
+import com.wechat.editor.ui.components.CodeSnippetDialog
 import com.wechat.editor.ui.components.ColorPickerDialog
 import com.wechat.editor.ui.components.FormatToolbar
 import com.wechat.editor.ui.components.HeadingStyleDialog
 import com.wechat.editor.ui.components.ImageInsertDialog
 import com.wechat.editor.ui.components.LinkDialog
 import com.wechat.editor.ui.components.ParagraphSettingsDialog
-import com.wechat.editor.ui.components.TemplateDialog
 import com.wechat.editor.utils.ClipboardUtils
 import com.wechat.editor.viewmodel.EditorViewModel
 import java.text.SimpleDateFormat
@@ -259,6 +260,18 @@ fun EditorScreen(
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                     )
 
+                    ArticleTemplatePreviewSection(
+                        articleId = article.id,
+                        appliedTemplate = article.template,
+                        previewHtml = viewModel::previewHtmlForTemplate,
+                        onSettledTemplate = { t -> viewModel.applyTemplate(t, showSnackbar = false) }
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    )
+
                     // Content field
                     BasicTextField(
                         value = contentValue,
@@ -354,11 +367,10 @@ fun EditorScreen(
         )
     }
 
-    if (editorState.showTemplateDialog) {
-        TemplateDialog(
-            currentTemplate = article.template,
-            onTemplateSelected = viewModel::applyTemplate,
-            onDismiss = viewModel::dismissTemplateDialog
+    if (editorState.showCodeSnippetDialog) {
+        CodeSnippetDialog(
+            onInsert = viewModel::insertCodeFence,
+            onDismiss = viewModel::dismissCodeSnippetDialog
         )
     }
 

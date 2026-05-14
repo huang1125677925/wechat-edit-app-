@@ -96,7 +96,10 @@ fun TemplateDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onTemplateSelected(selectedTemplate) }
+                onClick = {
+                    onTemplateSelected(selectedTemplate)
+                    onDismiss()
+                }
             ) {
                 Text("应用")
             }

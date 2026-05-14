@@ -257,8 +257,16 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         insertMarkdown("\n> ", "")
     }
 
+    /** Inserts a fenced code block; [language] is optional Markdown fence info (e.g. `kotlin`). */
+    fun insertCodeFence(language: String? = null) {
+        val lang = language?.trim()?.takeIf { it.isNotEmpty() }
+        val open = if (lang == null) "\n```\n" else "\n```$lang\n"
+        insertMarkdown(open, "\n```\n")
+        dismissCodeSnippetDialog()
+    }
+
     fun insertCodeBlock() {
-        insertMarkdown("\n```\n", "\n```\n")
+        insertCodeFence(null)
     }
 
     fun insertLink(text: String, url: String) {
@@ -311,12 +319,23 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         updateContent(TextFieldValue(newText, TextRange(lineStart + wrappedLine.length)))
     }
 
-    fun applyTemplate(template: ArticleTemplate) {
+    fun applyTemplate(template: ArticleTemplate, showSnackbar: Boolean = true) {
+        if (_article.value.template == template) return
         _article.update { it.copy(template = template) }
         _layoutSettings.update { getLayoutForTemplate(template) }
-        dismissTemplateDialog()
-        _snackbarMessage.value = "已应用模板：${template.displayName}"
+        if (showSnackbar) {
+            _snackbarMessage.value = "已应用模板：${template.displayName}"
+        }
         scheduleAutoSave()
+    }
+
+    fun previewHtmlForTemplate(template: ArticleTemplate): String {
+        return HtmlGenerator.generateHtml(
+            _contentValue.value.text,
+            getLayoutForTemplate(template),
+            _article.value.title,
+            _article.value.author
+        )
     }
 
     private fun getLayoutForTemplate(template: ArticleTemplate): LayoutSettings =
@@ -402,12 +421,12 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         _editorState.update { it.copy(showImageDialog = false) }
     }
 
-    fun showTemplateDialog() {
-        _editorState.update { it.copy(showTemplateDialog = true) }
+    fun showCodeSnippetDialog() {
+        _editorState.update { it.copy(showCodeSnippetDialog = true) }
     }
 
-    fun dismissTemplateDialog() {
-        _editorState.update { it.copy(showTemplateDialog = false) }
+    fun dismissCodeSnippetDialog() {
+        _editorState.update { it.copy(showCodeSnippetDialog = false) }
     }
 
     fun showHeadingStyleDialog(level: Int) {
