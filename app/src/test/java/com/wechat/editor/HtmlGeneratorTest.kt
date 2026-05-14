@@ -239,6 +239,25 @@ class HtmlGeneratorTest {
     }
 
     @Test
+    fun `convertMarkdownToHtml merges ordered list items separated by blank lines`() {
+        val md = "1. 第一项\n\n2. 第二项\n\n3. 第三项\n\n4. 第四项"
+        val html = HtmlGenerator.convertMarkdownToHtml(md)
+        assertTrue("Should be a single ordered list", html.contains("<ol>") && html.split("<ol>").size == 2)
+        assertTrue("Should contain four list items", html.split("<li>").size == 5)
+        assertTrue(html.contains("<li>第一项</li>"))
+        assertTrue(html.contains("<li>第二项</li>"))
+        assertTrue(html.contains("<li>第三项</li>"))
+        assertTrue(html.contains("<li>第四项</li>"))
+    }
+
+    @Test
+    fun `convertMarkdownToHtml does not merge ordered lists separated by a paragraph`() {
+        val md = "1. 列表甲\n\n中间段落\n\n1. 列表乙"
+        val html = HtmlGenerator.convertMarkdownToHtml(md)
+        assertEquals("Two separate lists", 3, html.split("<ol>").size)
+    }
+
+    @Test
     fun `convertMarkdownToHtml handles strikethrough`() {
         val html = HtmlGenerator.convertMarkdownToHtml("~~strikethrough~~")
         assertTrue("Should convert strikethrough", html.contains("<del>strikethrough</del>"))

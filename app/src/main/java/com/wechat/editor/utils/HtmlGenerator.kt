@@ -603,6 +603,9 @@ object HtmlGenerator {
             }
             "<ol>$items</ol>"
         }
+        // Blank lines (or any non-list lines) break the regex above into several one-item <ol>s;
+        // each new <ol> restarts browser numbering at 1. Merge adjacent lists separated only by whitespace.
+        html = html.replace(Regex("</ol>\\s*<ol>"), "")
 
         html = restoreProtectedMarkdownLinks(html, protectedLinks)
 
