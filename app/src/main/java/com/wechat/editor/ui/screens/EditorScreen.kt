@@ -43,13 +43,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
@@ -71,7 +75,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun EditorScreen(
     viewModel: EditorViewModel,
@@ -88,11 +92,19 @@ fun EditorScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val density = LocalDensity.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val contentFocusRequester = remember { FocusRequester() }
     val editorScrollState = rememberScrollState()
     var editorViewportHeightPx by remember { mutableStateOf(0) }
     var contentFieldTopPx by remember { mutableStateOf(0f) }
     var contentTextLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val cursorScrollMarginPx = with(density) { 80.dp.toPx() }
+    val refocusContentEditor: () -> Unit = remember(contentFocusRequester, keyboardController) {
+        {
+            contentFocusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
 
     // Pending alt-text while waiting for the user to pick an image from gallery
     var pendingImageAlt by remember { mutableStateOf("") }
@@ -171,13 +183,19 @@ fun EditorScreen(
                 },
                 actions = {
                     IconButton(
-                        onClick = { viewModel.undo() },
+                        onClick = {
+                            viewModel.undo()
+                            refocusContentEditor()
+                        },
                         enabled = editorState.canUndo
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "撤销")
                     }
                     IconButton(
-                        onClick = { viewModel.redo() },
+                        onClick = {
+                            viewModel.redo()
+                            refocusContentEditor()
+                        },
                         enabled = editorState.canRedo
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "重做")
@@ -360,6 +378,7 @@ fun EditorScreen(
                             .fillMaxWidth()
                             .heightIn(min = 360.dp)
                             .padding(horizontal = 16.dp, vertical = 16.dp)
+                            .focusRequester(contentFocusRequester)
                             .onGloballyPositioned { coordinates ->
                                 contentFieldTopPx = coordinates.positionInParent().y
                             }
@@ -381,6 +400,7 @@ fun EditorScreen(
                     viewModel = viewModel,
                     selectedTab = editorState.selectedTab,
                     isDeepSeekBusy = editorState.isDeepSeekPolishing,
+                    onContentEdit = refocusContentEditor,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -403,6 +423,7 @@ fun EditorScreen(
                     ColorPickerTarget.BACKGROUND -> viewModel.applyBackgroundColor(color)
                     ColorPickerTarget.HIGHLIGHT -> viewModel.applyTextColor(color)
                 }
+                refocusContentEditor()
             },
             onDismiss = viewModel::dismissColorPicker
         )
@@ -410,14 +431,20 @@ fun EditorScreen(
 
     if (editorState.showFontSizePicker) {
         FontSizePickerDialog(
-            onSizeSelected = viewModel::applyFontSize,
+            onSizeSelected = { size ->
+                viewModel.applyFontSize(size)
+                refocusContentEditor()
+            },
             onDismiss = viewModel::dismissFontSizePicker
         )
     }
 
     if (editorState.showLinkDialog) {
         LinkDialog(
-            onConfirm = viewModel::insertLink,
+            onConfirm = { text, url ->
+                viewModel.insertLink(text, url)
+                refocusContentEditor()
+            },
             onDismiss = viewModel::dismissLinkDialog
         )
     }
@@ -425,7 +452,10 @@ fun EditorScreen(
     if (editorState.showImageDialog) {
         ImageInsertDialog(
             isUploading = editorState.isUploadingImage,
-            onInsertUrl = { alt, url -> viewModel.insertImageMarkdown(alt, url) },
+            onInsertUrl = { alt, url ->
+                viewModel.insertImageMarkdown(alt, url)
+                refocusContentEditor()
+            },
             onPickAndUpload = { alt ->
                 pendingImageAlt = alt
                 imagePickerLauncher.launch("image/*")
@@ -436,7 +466,10 @@ fun EditorScreen(
 
     if (editorState.showCodeSnippetDialog) {
         CodeSnippetDialog(
-            onInsert = viewModel::insertCodeFence,
+            onInsert = { language ->
+                viewModel.insertCodeFence(language)
+                refocusContentEditor()
+            },
             onDismiss = viewModel::dismissCodeSnippetDialog
         )
     }

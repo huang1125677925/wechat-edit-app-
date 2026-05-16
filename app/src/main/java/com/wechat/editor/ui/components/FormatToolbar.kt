@@ -63,6 +63,7 @@ fun FormatToolbar(
     viewModel: EditorViewModel,
     selectedTab: EditorTab,
     isDeepSeekBusy: Boolean = false,
+    onContentEdit: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -102,16 +103,16 @@ fun FormatToolbar(
                 .padding(vertical = 8.dp)
         ) {
             when (selectedTab) {
-                EditorTab.FORMAT -> FormatTab(viewModel)
-                EditorTab.PARAGRAPH -> ParagraphTab(viewModel)
-                EditorTab.INSERT -> InsertTab(viewModel, isDeepSeekBusy)
+                EditorTab.FORMAT -> FormatTab(viewModel, onContentEdit)
+                EditorTab.PARAGRAPH -> ParagraphTab(viewModel, onContentEdit)
+                EditorTab.INSERT -> InsertTab(viewModel, isDeepSeekBusy, onContentEdit)
             }
         }
     }
 }
 
 @Composable
-private fun FormatTab(viewModel: EditorViewModel) {
+private fun FormatTab(viewModel: EditorViewModel, onContentEdit: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // Row 1: inline text formatting
         Row(
@@ -122,10 +123,18 @@ private fun FormatTab(viewModel: EditorViewModel) {
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ToolbarIconButton(icon = Icons.Default.FormatBold, label = "粗体") { viewModel.toggleBold() }
-            ToolbarIconButton(icon = Icons.Default.FormatItalic, label = "斜体") { viewModel.toggleItalic() }
-            ToolbarIconButton(icon = Icons.Default.FormatUnderlined, label = "下划线") { viewModel.toggleUnderline() }
-            ToolbarIconButton(icon = Icons.Default.FormatStrikethrough, label = "删除线") { viewModel.toggleStrikethrough() }
+            ToolbarIconButton(icon = Icons.Default.FormatBold, label = "粗体") {
+                performContentEdit(onContentEdit) { viewModel.toggleBold() }
+            }
+            ToolbarIconButton(icon = Icons.Default.FormatItalic, label = "斜体") {
+                performContentEdit(onContentEdit) { viewModel.toggleItalic() }
+            }
+            ToolbarIconButton(icon = Icons.Default.FormatUnderlined, label = "下划线") {
+                performContentEdit(onContentEdit) { viewModel.toggleUnderline() }
+            }
+            ToolbarIconButton(icon = Icons.Default.FormatStrikethrough, label = "删除线") {
+                performContentEdit(onContentEdit) { viewModel.toggleStrikethrough() }
+            }
             ToolbarDivider()
             ToolbarIconButton(icon = Icons.Default.FormatSize, label = "字号") { viewModel.showFontSizePicker() }
             ToolbarIconButton(icon = Icons.Default.ColorLens, label = "文字颜色") {
@@ -150,18 +159,30 @@ private fun FormatTab(viewModel: EditorViewModel) {
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            HeadingButtonWithStyle(label = "H1", onInsert = { viewModel.insertHeading(1) }, onStyle = { viewModel.showHeadingStyleDialog(1) })
-            HeadingButtonWithStyle(label = "H2", onInsert = { viewModel.insertHeading(2) }, onStyle = { viewModel.showHeadingStyleDialog(2) })
-            HeadingButtonWithStyle(label = "H3", onInsert = { viewModel.insertHeading(3) }, onStyle = { viewModel.showHeadingStyleDialog(3) })
-            ToolbarTextButton(text = "H4") { viewModel.insertHeading(4) }
-            ToolbarTextButton(text = "H5") { viewModel.insertHeading(5) }
-            ToolbarTextButton(text = "H6") { viewModel.insertHeading(6) }
+            HeadingButtonWithStyle(
+                label = "H1",
+                onInsert = { performContentEdit(onContentEdit) { viewModel.insertHeading(1) } },
+                onStyle = { viewModel.showHeadingStyleDialog(1) }
+            )
+            HeadingButtonWithStyle(
+                label = "H2",
+                onInsert = { performContentEdit(onContentEdit) { viewModel.insertHeading(2) } },
+                onStyle = { viewModel.showHeadingStyleDialog(2) }
+            )
+            HeadingButtonWithStyle(
+                label = "H3",
+                onInsert = { performContentEdit(onContentEdit) { viewModel.insertHeading(3) } },
+                onStyle = { viewModel.showHeadingStyleDialog(3) }
+            )
+            ToolbarTextButton(text = "H4") { performContentEdit(onContentEdit) { viewModel.insertHeading(4) } }
+            ToolbarTextButton(text = "H5") { performContentEdit(onContentEdit) { viewModel.insertHeading(5) } }
+            ToolbarTextButton(text = "H6") { performContentEdit(onContentEdit) { viewModel.insertHeading(6) } }
         }
     }
 }
 
 @Composable
-private fun ParagraphTab(viewModel: EditorViewModel) {
+private fun ParagraphTab(viewModel: EditorViewModel, onContentEdit: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // Row 1: alignment + list + block elements
         Row(
@@ -173,27 +194,27 @@ private fun ParagraphTab(viewModel: EditorViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             ToolbarIconButton(icon = Icons.AutoMirrored.Filled.FormatAlignLeft, label = "左对齐") {
-                viewModel.applyAlignment(TextAlignment.LEFT)
+                performContentEdit(onContentEdit) { viewModel.applyAlignment(TextAlignment.LEFT) }
             }
             ToolbarIconButton(icon = Icons.Default.FormatAlignCenter, label = "居中") {
-                viewModel.applyAlignment(TextAlignment.CENTER)
+                performContentEdit(onContentEdit) { viewModel.applyAlignment(TextAlignment.CENTER) }
             }
             ToolbarIconButton(icon = Icons.AutoMirrored.Filled.FormatAlignRight, label = "右对齐") {
-                viewModel.applyAlignment(TextAlignment.RIGHT)
+                performContentEdit(onContentEdit) { viewModel.applyAlignment(TextAlignment.RIGHT) }
             }
             ToolbarDivider()
             ToolbarIconButton(icon = Icons.AutoMirrored.Filled.FormatListBulleted, label = "无序列表") {
-                viewModel.insertBulletList()
+                performContentEdit(onContentEdit) { viewModel.insertBulletList() }
             }
             ToolbarIconButton(icon = Icons.Default.FormatListNumbered, label = "有序列表") {
-                viewModel.insertOrderedList()
+                performContentEdit(onContentEdit) { viewModel.insertOrderedList() }
             }
             ToolbarDivider()
             ToolbarIconButton(icon = Icons.Default.FormatQuote, label = "引用") {
-                viewModel.insertQuote()
+                performContentEdit(onContentEdit) { viewModel.insertQuote() }
             }
             ToolbarIconButton(icon = Icons.Default.HorizontalRule, label = "分割线") {
-                viewModel.insertHorizontalRule()
+                performContentEdit(onContentEdit) { viewModel.insertHorizontalRule() }
             }
         }
 
@@ -220,14 +241,20 @@ private fun ParagraphTab(viewModel: EditorViewModel) {
             ToolbarDivider()
             // Quick line height shortcuts
             listOf(1.5f to "1.5", 1.75f to "1.75", 2.0f to "2.0").forEach { (value, label) ->
-                ToolbarTextButton(text = label) { viewModel.applyLineHeight(value) }
+                ToolbarTextButton(text = label) {
+                    performContentEdit(onContentEdit) { viewModel.applyLineHeight(value) }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun InsertTab(viewModel: EditorViewModel, isDeepSeekBusy: Boolean) {
+private fun InsertTab(
+    viewModel: EditorViewModel,
+    isDeepSeekBusy: Boolean,
+    onContentEdit: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -243,12 +270,12 @@ private fun InsertTab(viewModel: EditorViewModel, isDeepSeekBusy: Boolean) {
             )
         } else {
             ToolbarIconButton(icon = Icons.Default.AutoAwesome, label = "DeepSeek 规范化排版") {
-                viewModel.polishContentWithDeepSeek()
+                performContentEdit(onContentEdit) { viewModel.polishContentWithDeepSeek() }
             }
         }
         ToolbarDivider()
         ToolbarIconButton(icon = Icons.Default.AutoFixHigh, label = "一键格式化 Markdown") {
-            viewModel.formatMarkdownContent()
+            performContentEdit(onContentEdit) { viewModel.formatMarkdownContent() }
         }
         ToolbarDivider()
         ToolbarIconButton(icon = Icons.Default.InsertLink, label = "链接") {
@@ -258,19 +285,28 @@ private fun InsertTab(viewModel: EditorViewModel, isDeepSeekBusy: Boolean) {
             viewModel.showImageDialog()
         }
         ToolbarIconButton(icon = Icons.Default.Code, label = "代码块") {
-            viewModel.insertCodeBlock()
+            performContentEdit(onContentEdit) { viewModel.insertCodeBlock() }
         }
         ToolbarTextButton(text = "代码片段") {
             viewModel.showCodeSnippetDialog()
         }
         ToolbarDivider()
         ToolbarTextButton(text = "阅读原文") {
-            viewModel.insertMarkdown("\n[阅读原文](https://mp.weixin.qq.com)\n")
+            performContentEdit(onContentEdit) {
+                viewModel.insertMarkdown("\n[阅读原文](https://mp.weixin.qq.com)\n")
+            }
         }
         ToolbarTextButton(text = "关注我们") {
-            viewModel.insertMarkdown("\n---\n**关注我们**，获取更多精彩内容。\n")
+            performContentEdit(onContentEdit) {
+                viewModel.insertMarkdown("\n---\n**关注我们**，获取更多精彩内容。\n")
+            }
         }
     }
+}
+
+private inline fun performContentEdit(onContentEdit: () -> Unit, edit: () -> Unit) {
+    edit()
+    onContentEdit()
 }
 
 @Composable
