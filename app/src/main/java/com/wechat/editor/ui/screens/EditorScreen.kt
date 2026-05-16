@@ -99,7 +99,7 @@ fun EditorScreen(
     var contentFieldTopPx by remember { mutableStateOf(0f) }
     var contentTextLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val cursorScrollMarginPx = with(density) { 80.dp.toPx() }
-    val refocusContentEditor = remember(contentFocusRequester, keyboardController) {
+    val refocusContentEditor: () -> Unit = remember(contentFocusRequester, keyboardController) {
         {
             contentFocusRequester.requestFocus()
             keyboardController?.show()
