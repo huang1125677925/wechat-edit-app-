@@ -23,6 +23,8 @@ import com.wechat.editor.model.TextStyle
 import com.wechat.editor.data.ArticleDraftStore
 import com.wechat.editor.data.UserSettingsStore
 import com.wechat.editor.utils.DeepSeekApi
+import com.wechat.editor.utils.GitHubContentsApi
+import com.wechat.editor.utils.GitHubTargetParser
 import com.wechat.editor.utils.ImgurLaApi
 import com.wechat.editor.utils.HtmlGenerator
 import com.wechat.editor.utils.MarkdownAutoFormatter
@@ -366,7 +368,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         )
     }
 
-    fun saveArticle(): Article {
+    fun saveArticle(showSnackbar: Boolean = true): Article {
         val saved = _article.value.copy(
             title = _titleValue.value.text,
             content = _contentValue.value.text,
@@ -377,8 +379,73 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         )
         _article.value = saved
         editorSessionKey?.let { draftStore.clearDraft(it) }
-        _snackbarMessage.value = "文章已保存"
+        if (showSnackbar) {
+            _snackbarMessage.value = "文章已保存"
+        }
         return saved
+    }
+
+    fun saveArticleToGitHub(article: Article = buildArticleSnapshot()) {
+        if (_editorState.value.isSavingToGitHub) return
+
+        val token = userSettingsStore.getGitHubToken()
+        val directory = userSettingsStore.getGitHubDirectory()
+        val branch = userSettingsStore.getGitHubBranch()
+        val target = GitHubTargetParser.parse(directory, branch)
+        if (token.isBlank() || target == null) {
+            _snackbarMessage.value = "请先在设置中填写 GitHub Token 和目录"
+            return
+        }
+        if (article.title.isBlank() && article.content.isBlank()) {
+            _snackbarMessage.value = "空文章无法保存到 GitHub"
+            return
+        }
+
+        viewModelScope.launch {
+            _editorState.update { it.copy(isSavingToGitHub = true) }
+            val fileName = buildGitHubFileName(article)
+            val commitTitle = article.title.trim().ifBlank { "Untitled article" }
+            when (
+                val result = GitHubContentsApi.saveMarkdown(
+                    token = token,
+                    target = target,
+                    fileName = fileName,
+                    markdown = buildGitHubMarkdown(article),
+                    commitMessage = "Save article: $commitTitle"
+                )
+            ) {
+                is GitHubContentsApi.Result.Success -> {
+                    _snackbarMessage.value = "已保存到 GitHub：${result.path}"
+                }
+                is GitHubContentsApi.Result.Error -> {
+                    _snackbarMessage.value = "GitHub 保存失败：${result.message}"
+                }
+            }
+            _editorState.update { it.copy(isSavingToGitHub = false) }
+        }
+    }
+
+    private fun buildGitHubMarkdown(article: Article): String {
+        val sections = mutableListOf<String>()
+        val title = article.title.trim()
+        val author = article.author.trim()
+        if (title.isNotBlank()) sections += "# $title"
+        if (author.isNotBlank()) sections += "> 作者：$author"
+        if (article.content.isNotBlank()) sections += article.content.trimEnd()
+        return sections.joinToString("\n\n").trimEnd() + "\n"
+    }
+
+    private fun buildGitHubFileName(article: Article): String {
+        val fallback = "article-${article.id.take(8)}"
+        val base = article.title.ifBlank { fallback }
+        val sanitized = base
+            .replace(Regex("""[\\/:*?"<>|\p{Cntrl}]"""), "-")
+            .replace(Regex("""\s+"""), "-")
+            .trim('-', '.', ' ')
+            .take(80)
+            .trim('-', '.', ' ')
+            .ifBlank { fallback }
+        return if (sanitized.endsWith(".md", ignoreCase = true)) sanitized else "$sanitized.md"
     }
 
     fun togglePreviewMode() {

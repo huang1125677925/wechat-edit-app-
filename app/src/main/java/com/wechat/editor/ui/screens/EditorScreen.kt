@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Preview
 import androidx.compose.material.icons.filled.Save
@@ -43,8 +45,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,6 +69,7 @@ import com.wechat.editor.viewmodel.EditorViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +87,12 @@ fun EditorScreen(
     val snackbarMessage by viewModel.snackbarMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val density = LocalDensity.current
+    val editorScrollState = rememberScrollState()
+    var editorViewportHeightPx by remember { mutableStateOf(0) }
+    var contentFieldTopPx by remember { mutableStateOf(0f) }
+    var contentTextLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val cursorScrollMarginPx = with(density) { 80.dp.toPx() }
 
     // Pending alt-text while waiting for the user to pick an image from gallery
     var pendingImageAlt by remember { mutableStateOf("") }
@@ -96,6 +110,34 @@ fun EditorScreen(
             snackbarHostState.showSnackbar(it)
             viewModel.clearSnackbar()
         }
+    }
+
+    LaunchedEffect(
+        contentValue.selection.start,
+        contentValue.selection.end,
+        contentTextLayout,
+        editorViewportHeightPx
+    ) {
+        val layout = contentTextLayout ?: return@LaunchedEffect
+        if (editorViewportHeightPx <= 0) return@LaunchedEffect
+
+        val cursorOffset = contentValue.selection.end.coerceIn(0, contentValue.text.length)
+        val cursorRect = layout.getCursorRect(cursorOffset)
+        val fieldTopInContent = contentFieldTopPx + editorScrollState.value
+        val cursorTop = fieldTopInContent + cursorRect.top
+        val cursorBottom = fieldTopInContent + cursorRect.bottom
+        val visibleTop = editorScrollState.value.toFloat()
+        val visibleBottom = visibleTop + editorViewportHeightPx
+
+        val target = when {
+            cursorBottom + cursorScrollMarginPx > visibleBottom ->
+                (cursorBottom + cursorScrollMarginPx - editorViewportHeightPx).roundToInt()
+            cursorTop - cursorScrollMarginPx < visibleTop ->
+                (cursorTop - cursorScrollMarginPx).roundToInt()
+            else -> null
+        } ?: return@LaunchedEffect
+
+        editorScrollState.animateScrollTo(target.coerceIn(0, editorScrollState.maxValue))
     }
 
     Scaffold(
@@ -159,6 +201,23 @@ fun EditorScreen(
                     }) {
                         Icon(Icons.Default.Save, contentDescription = "保存")
                     }
+                    IconButton(
+                        onClick = {
+                            val saved = viewModel.saveArticle(showSnackbar = false)
+                            onSave(saved)
+                            viewModel.saveArticleToGitHub(saved)
+                        },
+                        enabled = !editorState.isSavingToGitHub
+                    ) {
+                        Icon(
+                            Icons.Default.CloudUpload,
+                            contentDescription = if (editorState.isSavingToGitHub) {
+                                "正在保存到GitHub"
+                            } else {
+                                "保存到GitHub"
+                            }
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
@@ -183,7 +242,8 @@ fun EditorScreen(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .verticalScroll(rememberScrollState())
+                        .onSizeChanged { editorViewportHeightPx = it.height }
+                        .verticalScroll(editorScrollState)
                         .background(MaterialTheme.colorScheme.surface)
                 ) {
                     // Author field
@@ -283,7 +343,7 @@ fun EditorScreen(
                         ),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                         decorationBox = { innerTextField ->
-                            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
+                            Box {
                                 if (contentValue.text.isEmpty()) {
                                     Text(
                                         "开始编写您的文章内容...\n\n支持Markdown语法：\n• **粗体** *斜体* ~~删除线~~\n• # 标题1  ## 标题2  ### 标题3\n• - 无序列表  1. 有序列表\n• > 引用块\n• | 表头 | 表头 | 管道表格\n• ```代码块```\n• [链接文字](URL)\n• ![图片描述](图片URL)",
@@ -295,7 +355,14 @@ fun EditorScreen(
                                 innerTextField()
                             }
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        onTextLayout = { contentTextLayout = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 360.dp)
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
+                            .onGloballyPositioned { coordinates ->
+                                contentFieldTopPx = coordinates.positionInParent().y
+                            }
                     )
                 }
 
