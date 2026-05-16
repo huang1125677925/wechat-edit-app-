@@ -35,6 +35,9 @@ fun SettingsScreen(
     onBack: () -> Unit
 ) {
     val apiKey by viewModel.apiKey.collectAsState()
+    val githubToken by viewModel.githubToken.collectAsState()
+    val githubDirectory by viewModel.githubDirectory.collectAsState()
+    val githubBranch by viewModel.githubBranch.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.reloadFromDisk()
@@ -93,6 +96,59 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("保存")
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+            Text(
+                text = "GitHub 保存",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "填写具有仓库 Contents 读写权限的 GitHub Token，并指定仓库目录 URL 或 owner/repo/path。编辑器可将当前文章以 Markdown 文件保存到该目录。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "目录示例：https://github.com/owner/repo/tree/main/articles 或 owner/repo/articles",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = githubToken,
+                onValueChange = viewModel::updateGitHubTokenPreview,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("GitHub Token") },
+                placeholder = { Text("github_pat_…") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation()
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = githubDirectory,
+                onValueChange = viewModel::updateGitHubDirectoryPreview,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("GitHub 目录") },
+                placeholder = { Text("https://github.com/owner/repo/tree/main/articles") },
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = githubBranch,
+                onValueChange = viewModel::updateGitHubBranchPreview,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("分支（目录 URL 未包含分支时使用）") },
+                placeholder = { Text("main") },
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = viewModel::saveGitHubSettings,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("保存 GitHub 设置")
             }
         }
     }
