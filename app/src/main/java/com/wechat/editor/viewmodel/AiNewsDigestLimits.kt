@@ -19,7 +19,7 @@ internal object AiNewsDigestLimits {
      */
     fun modelInputBounds(sendableItemCount: Int): IntRange? {
         if (sendableItemCount <= 0) return null
-        val min = minOf(PREFERRED_MIN_ITEMS, sendableItemCount).coerceAtLeast(1)
+        val min = if (sendableItemCount >= PREFERRED_MIN_ITEMS) PREFERRED_MIN_ITEMS else 1
         return min..sendableItemCount
     }
 
