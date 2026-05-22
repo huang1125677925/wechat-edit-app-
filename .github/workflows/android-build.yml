@@ -1,4 +1,7 @@
-name: Android Build & Release
+name: Mobile Build & Release
+
+permissions:
+  contents: read
 
 on:
   push:
@@ -19,16 +22,26 @@ on:
         options:
           - debug
           - release
+      platform:
+        description: 'Target platform'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - android
+          - ios
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ── Job 1: Lint & Unit Tests ─────────────────────────────────────────────────
+  # ── Job 1: Android Lint & Unit Tests ────────────────────────────────────────
   test:
-    name: Lint & Unit Tests
+    name: Android Lint & Unit Tests
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,7 +51,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -58,24 +70,17 @@ jobs:
           fi
           echo "sdk.dir=$SDK" >> "$GITHUB_WORKSPACE/local.properties"
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Run lint
-        run: ./gradlew lint --stacktrace
-
-      - name: Run unit tests
-        run: ./gradlew test --stacktrace
+      - name: Run lint and unit tests
+        run: ./gradlew lintDebug testDebugUnitTest --stacktrace --continue
 
       - name: Upload lint results
         if: always()
@@ -93,12 +98,16 @@ jobs:
           path: app/build/reports/tests/
           retention-days: 7
 
-  # ── Job 2: Build Debug APK ──────────────────────────────────────────────────
-  build-debug:
-    name: Build Debug APK
+  # ── Job 2: Build Android Debug APK ──────────────────────────────────────────
+  build-android-debug:
+    name: Build Android Debug APK
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
+    if: |
+      always() &&
+      needs.test.result == 'success' &&
+      (github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'debug')) &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android')
 
     steps:
       - name: Checkout code
@@ -109,7 +118,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -119,15 +127,11 @@ jobs:
 
       - *gradle_android_sdk
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -148,12 +152,18 @@ jobs:
           path: artifacts/WeChatEditor-debug-${{ github.sha }}.apk
           retention-days: 30
 
-  # ── Job 3: Build Release APK (tag-triggered or manual) ──────────────────────
-  build-release:
-    name: Build Release APK
+  # ── Job 3: Build Android Release APK ────────────────────────────────────────
+  build-android-release:
+    name: Build Android Release APK
     runs-on: ubuntu-latest
     needs: test
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release')
+    permissions:
+      contents: write
+    if: |
+      always() &&
+      needs.test.result == 'success' &&
+      (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release')) &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android')
 
     steps:
       - name: Checkout code
@@ -164,7 +174,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -174,15 +183,11 @@ jobs:
 
       - *gradle_android_sdk
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -245,15 +250,16 @@ jobs:
             ## 微信公众号编辑器 ${{ steps.get_version.outputs.tag }}
 
             ### 功能特性
-            - 📝 Markdown 语法支持的富文本编辑器
-            - 🎨 6种专业排版模板（优雅文艺、科技简约、商务专业等）
-            - 👁️ 实时HTML预览
-            - 📋 一键复制HTML代码
-            - 🔤 字体、颜色、对齐、行距等精细排版控制
-            - 📱 Material Design 3 现代界面
+            - Markdown 语法支持的富文本编辑器
+            - 6种专业排版模板（优雅文艺、科技简约、商务专业等）
+            - 实时HTML预览
+            - 一键复制HTML代码
+            - 字体、颜色、对齐、行距等精细排版控制
+            - Material Design 3 现代界面
 
             ### 下载安装
-            下载下方的 APK 文件，允许安装未知来源应用后直接安装。
+            - Android: 下载下方 APK 文件，允许安装未知来源应用后直接安装。
+            - iOS: 下载下方 xcarchive 产物，用于后续签名、导出 IPA 或 TestFlight 分发。
 
             ### 更新日志
             ${{ github.event.release.body }}
@@ -264,12 +270,129 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Job 4: Build Summary ─────────────────────────────────────────────────────
+  # ── Job 4: Build iOS Debug App ──────────────────────────────────────────────
+  build-ios-debug:
+    name: Build iOS Debug App
+    runs-on: macos-latest
+    if: |
+      (github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'debug')) &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'ios')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Cache Xcode DerivedData
+        uses: actions/cache@v4
+        with:
+          path: build/ios/DerivedData
+          key: ${{ runner.os }}-xcode-debug-${{ hashFiles('ios/WeChatEditor.xcodeproj/project.pbxproj', 'ios/WeChatEditor/**/*.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-debug-
+
+      - name: Build simulator app
+        run: |
+          xcodebuild \
+            -project ios/WeChatEditor.xcodeproj \
+            -scheme WeChatEditor \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath build/ios/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package simulator app
+        run: |
+          mkdir -p artifacts
+          APP_PATH=$(find build/ios/DerivedData/Build/Products/Debug-iphonesimulator -name "WeChatEditor.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::WeChatEditor.app was not found"
+            exit 1
+          fi
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "artifacts/WeChatEditor-ios-simulator-${{ github.sha }}.zip"
+
+      - name: Upload iOS simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app-${{ github.sha }}
+          path: artifacts/WeChatEditor-ios-simulator-${{ github.sha }}.zip
+          retention-days: 30
+
+  # ── Job 5: Build iOS Release Archive ────────────────────────────────────────
+  build-ios-release:
+    name: Build iOS Release Archive
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    if: |
+      (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release')) &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'ios')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Cache Xcode DerivedData
+        uses: actions/cache@v4
+        with:
+          path: build/ios/DerivedData
+          key: ${{ runner.os }}-xcode-release-${{ hashFiles('ios/WeChatEditor.xcodeproj/project.pbxproj', 'ios/WeChatEditor/**/*.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-release-
+
+      - name: Get version name
+        id: get_version
+        run: |
+          VERSION=$(grep 'MARKETING_VERSION =' ios/WeChatEditor.xcodeproj/project.pbxproj | head -n 1 | sed 's/.*MARKETING_VERSION = \(.*\);/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Archive iOS app
+        run: |
+          xcodebuild archive \
+            -project ios/WeChatEditor.xcodeproj \
+            -scheme WeChatEditor \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath build/ios/DerivedData \
+            -archivePath build/ios/archive/WeChatEditor.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            SKIP_INSTALL=NO
+
+      - name: Package iOS archive
+        run: |
+          mkdir -p artifacts
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/ios/archive/WeChatEditor.xcarchive \
+            artifacts/WeChatEditor-ios-${{ steps.get_version.outputs.version }}.xcarchive.zip
+
+      - name: Upload iOS archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-xcarchive-${{ steps.get_version.outputs.version }}
+          path: artifacts/WeChatEditor-ios-${{ steps.get_version.outputs.version }}.xcarchive.zip
+          retention-days: 90
+
+      - name: Attach iOS archive to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/WeChatEditor-ios-${{ steps.get_version.outputs.version }}.xcarchive.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Job 6: Build Summary ────────────────────────────────────────────────────
   build-summary:
     name: Build Summary
     runs-on: ubuntu-latest
-    needs: [test, build-debug]
-    if: always() && (github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')))
+    needs: [test, build-android-debug, build-ios-debug]
+    if: always() && (github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'debug'))
     steps:
       - name: Build Summary
         run: |
@@ -277,11 +400,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| 步骤 | 状态 |" >> $GITHUB_STEP_SUMMARY
           echo "|------|------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Lint & 单元测试 | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Debug APK 构建 | ${{ needs.build-debug.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Android Lint & 单元测试 | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Android Debug APK 构建 | ${{ needs.build-android-debug.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| iOS Debug App 构建 | ${{ needs.build-ios-debug.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**提交**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**分支**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> Debug APK 已上传为 Artifact，保留 30 天。" >> $GITHUB_STEP_SUMMARY
+          echo "> Debug APK 与 iOS simulator app 已上传为 Artifact，保留 30 天。" >> $GITHUB_STEP_SUMMARY
           echo "> 如需发布正式版本，请推送 \`v*\` 格式的 tag。" >> $GITHUB_STEP_SUMMARY

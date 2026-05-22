@@ -1,6 +1,6 @@
 # 微信公众号文章编辑器
 
-一款专为微信公众号内容创作者设计的安卓应用，支持富文本编辑、多种排版模板和 HTML 导出。
+一款专为微信公众号内容创作者设计的移动应用，Android 端支持富文本编辑、多种排版模板和 HTML 导出；iOS 端已接入基础工程与 CI 产物构建。
 
 ## 功能特性
 
@@ -35,6 +35,7 @@
 - **导航**: Navigation Compose
 - **最低 SDK**: 24 (Android 7.0)
 - **目标 SDK**: 34 (Android 14)
+- **iOS 最低版本**: iOS 16.0
 
 ## Git 工作流与分支约定
 
@@ -70,13 +71,41 @@ cd wechat-edit-app
 # APK 路径：app/build/outputs/apk/debug/app-debug.apk
 ```
 
+#### iOS
+
+```bash
+# 构建 iOS 模拟器 App
+xcodebuild \
+  -project ios/WeChatEditor.xcodeproj \
+  -scheme WeChatEditor \
+  -configuration Debug \
+  -sdk iphonesimulator \
+  -derivedDataPath build/ios/DerivedData \
+  CODE_SIGNING_ALLOWED=NO \
+  build
+
+# 构建 iOS Release xcarchive（未签名）
+xcodebuild archive \
+  -project ios/WeChatEditor.xcodeproj \
+  -scheme WeChatEditor \
+  -configuration Release \
+  -destination "generic/platform=iOS" \
+  -archivePath build/ios/archive/WeChatEditor.xcarchive \
+  CODE_SIGNING_ALLOWED=NO \
+  SKIP_INSTALL=NO
+```
+
 ### GitHub Actions 自动构建
 
 推送代码后，GitHub Actions 会自动：
 
-1. **Lint 检查 + 单元测试** — 所有分支 / PR 触发
-2. **Debug APK 构建** — 推送到任意分支时触发，Artifact 保留 30 天
-3. **Release APK 构建 + 发布** — 推送 `v*` 格式 tag 时触发，自动创建 GitHub Release
+1. **Android Lint 检查 + 单元测试** — Android 构建触发
+2. **Android Debug APK 构建** — PR、普通 push 或手动 debug 构建触发，Artifact 保留 30 天
+3. **iOS Debug App 构建** — PR、普通 push 或手动 debug 构建触发，上传 simulator `.app` 压缩包，Artifact 保留 30 天
+4. **Android Release APK 构建 + 发布** — 推送 `v*` 格式 tag 或手动 release 构建触发
+5. **iOS Release Archive 构建 + 发布** — 推送 `v*` 格式 tag 或手动 release 构建触发，上传未签名 `.xcarchive` 压缩包
+
+手动触发工作流时可以通过 `platform` 选择 `all`、`android` 或 `ios`，通过 `build_type` 选择 `debug` 或 `release`。
 
 #### 触发正式发布
 
@@ -86,6 +115,8 @@ git push origin v1.0.0
 ```
 
 #### 配置签名（可选）
+
+iOS 会生成 `.xcarchive.zip`，用于后续接入 Apple 证书、导出 IPA 或上传 TestFlight。当前流水线默认不做 iOS 签名。
 
 在仓库 Settings → Secrets 中添加：
 
@@ -124,7 +155,10 @@ app/src/main/java/com/wechat/editor/
 │       ├── ColorPickerDialog.kt     # 颜色选择器
 │       ├── LinkDialog.kt            # 链接插入对话框
 │       └── TemplateDialog.kt        # 模板选择对话框
-└── utils/
-    ├── HtmlGenerator.kt             # Markdown → HTML 转换器 + CSS 生成
-    └── ClipboardUtils.kt            # 剪贴板工具
+├── utils/
+│   ├── HtmlGenerator.kt             # Markdown → HTML 转换器 + CSS 生成
+│   └── ClipboardUtils.kt            # 剪贴板工具
+└── ios/
+    ├── WeChatEditor.xcodeproj       # iOS Xcode 工程
+    └── WeChatEditor/                # SwiftUI iOS 应用源码
 ```

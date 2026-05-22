@@ -27,7 +27,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -141,16 +140,11 @@ fun AiNewsDigestScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "送入模型的条目数量（越多越全，耗时与 tokens 越高）：${ui.maxItemsForModel}",
+                text = "送入模型的条目数量会随当前已选条目自动同步：${ui.items.size}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
-            Slider(
-                value = ui.maxItemsForModel.toFloat(),
-                onValueChange = { viewModel.setMaxForModel(it.toInt()) },
-                valueRange = 20f..800f,
-                steps = 155
-            )
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -268,7 +262,7 @@ fun AiNewsDigestScreen(
                 if (ui.items.size > 30) {
                     item {
                         Text(
-                            text = "… 共 ${ui.items.size} 条，生成时将取前 ${ui.maxItemsForModel} 条送入模型",
+                            text = "… 共 ${ui.items.size} 条，生成时将全部送入模型",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                             modifier = Modifier.padding(vertical = 8.dp)

@@ -78,10 +78,6 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
         setWindowHours(168)
     }
 
-    fun setMaxForModel(n: Int) {
-        _ui.update { it.copy(maxItemsForModel = n.coerceIn(20, 800)) }
-    }
-
     private fun setWindowHours(hours: Int) {
         if (_ui.value.windowHours == hours) return
         loadedFeed = null
@@ -208,11 +204,9 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
             return
         }
 
-        val max = _ui.value.maxItemsForModel
         val lines = _ui.value.items
             .asSequence()
             .filter { it.url.isNotBlank() }
-            .take(max)
             .mapIndexed { index, item -> formatItemLine(index + 1, item) }
             .joinToString("\n")
 
@@ -362,7 +356,6 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
     data class DigestUiState(
         val feedBackend: FeedBackend = FeedBackend.AI_NEWS_AGGREGATOR,
         val windowHours: Int = 24,
-        val maxItemsForModel: Int = 80,
         val isLoadingFeed: Boolean = false,
         val feedError: String? = null,
         val feedMeta: FeedMeta? = null,
