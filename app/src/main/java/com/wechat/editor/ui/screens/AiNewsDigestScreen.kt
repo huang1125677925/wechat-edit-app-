@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.wechat.editor.model.AiNewsItem
 import com.wechat.editor.model.Article
+import com.wechat.editor.viewmodel.AiNewsDigestLimits
 import com.wechat.editor.viewmodel.AiNewsDigestViewModel
 import com.wechat.editor.viewmodel.AiNewsDigestViewModel.FeedBackend
 import kotlinx.coroutines.delay
@@ -140,17 +141,29 @@ fun AiNewsDigestScreen(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "送入模型的条目数量（越多越全，耗时与 tokens 越高）：${ui.maxItemsForModel}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-            Slider(
-                value = ui.maxItemsForModel.toFloat(),
-                onValueChange = { viewModel.setMaxForModel(it.toInt()) },
-                valueRange = 20f..800f,
-                steps = 155
-            )
+            val modelInputBounds = AiNewsDigestLimits.modelInputBounds(ui.sendableItemCount)
+            if (modelInputBounds != null) {
+                val sliderMin = modelInputBounds.first.toFloat()
+                val sliderMax = modelInputBounds.last.toFloat()
+                Text(
+                    text = "送入模型的条目数量（${ui.maxItemsForModel} / ${ui.sendableItemCount}，已选且含有效链接；越多越全，耗时与 tokens 越高）",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Slider(
+                    value = ui.maxItemsForModel.toFloat().coerceIn(sliderMin, sliderMax),
+                    onValueChange = { viewModel.setMaxForModel(it.toInt()) },
+                    valueRange = sliderMin..sliderMax,
+                    steps = AiNewsDigestLimits.sliderSteps(modelInputBounds),
+                    enabled = modelInputBounds.last > modelInputBounds.first
+                )
+            } else {
+                Text(
+                    text = "送入模型的条目数量：拉取数据并选择来源后，可按实际条数调整（默认 ${AiNewsDigestLimits.DEFAULT_MAX_ITEMS_FOR_MODEL} 条）",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

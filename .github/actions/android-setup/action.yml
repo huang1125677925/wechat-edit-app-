@@ -1,0 +1,44 @@
+name: Android project setup
+description: JDK, Android SDK, Gradle cache, and local.properties for Gradle
+
+inputs:
+  java-version:
+    description: JDK version
+    required: false
+    default: '17'
+  install-sdk-components:
+    description: Run sdkmanager for platform and build-tools
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.java-version }}
+        distribution: temurin
+        cache: gradle
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Android SDK components
+      if: inputs.install-sdk-components == 'true'
+      shell: bash
+      run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+    - name: Point Gradle at Android SDK (local.properties)
+      shell: bash
+      run: |
+        SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+        if [ -z "$SDK" ]; then
+          echo "::error::ANDROID_SDK_ROOT / ANDROID_HOME is not set after setup-android"
+          exit 1
+        fi
+        echo "sdk.dir=$SDK" >> "$GITHUB_WORKSPACE/local.properties"
+
+    - name: Grant execute permission for gradlew
+      shell: bash
+      run: chmod +x gradlew
