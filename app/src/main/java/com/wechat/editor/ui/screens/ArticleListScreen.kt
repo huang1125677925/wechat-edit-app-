@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -68,7 +69,8 @@ fun ArticleListScreen(
     onNewArticle: () -> Unit,
     onOpenArticle: (Article) -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenAiNewsDigest: () -> Unit
+    onOpenAiNewsDigest: () -> Unit,
+    onOpenAiNewsChat: () -> Unit
 ) {
     val articles by viewModel.articles.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -119,6 +121,17 @@ fun ArticleListScreen(
         },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End) {
+                SmallFloatingActionButton(
+                    onClick = onOpenAiNewsChat,
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Chat,
+                        contentDescription = "AI 资讯咨询"
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
                 SmallFloatingActionButton(
                     onClick = onOpenAiNewsDigest,
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,

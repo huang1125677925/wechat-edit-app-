@@ -8,6 +8,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.wechat.editor.viewmodel.AiNewsChatViewModel
 import com.wechat.editor.viewmodel.AiNewsDigestViewModel
 import com.wechat.editor.viewmodel.ArticleListViewModel
 import com.wechat.editor.viewmodel.EditorViewModel
@@ -16,6 +17,7 @@ import com.wechat.editor.viewmodel.SettingsViewModel
 sealed class Screen(val route: String) {
     object ArticleList : Screen("article_list")
     object AiNewsDigest : Screen("ai_news_digest")
+    object AiNewsChat : Screen("ai_news_chat")
     object Settings : Screen("settings")
     object Editor : Screen("editor/{articleId}") {
         fun createRoute(articleId: String = "new") = "editor/$articleId"
@@ -27,6 +29,7 @@ fun WeChatEditorNavGraph(
     navController: NavHostController,
     articleListViewModel: ArticleListViewModel = viewModel(),
     aiNewsDigestViewModel: AiNewsDigestViewModel = viewModel(),
+    aiNewsChatViewModel: AiNewsChatViewModel = viewModel(),
     editorViewModel: EditorViewModel = viewModel(),
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
@@ -46,7 +49,8 @@ fun WeChatEditorNavGraph(
                     navController.navigate(Screen.Editor.createRoute(article.id))
                 },
                 onOpenSettings = { navController.navigate(Screen.Settings.route) },
-                onOpenAiNewsDigest = { navController.navigate(Screen.AiNewsDigest.route) }
+                onOpenAiNewsDigest = { navController.navigate(Screen.AiNewsDigest.route) },
+                onOpenAiNewsChat = { navController.navigate(Screen.AiNewsChat.route) }
             )
         }
 
@@ -62,6 +66,13 @@ fun WeChatEditorNavGraph(
                         restoreState = true
                     }
                 }
+            )
+        }
+
+        composable(Screen.AiNewsChat.route) {
+            AiNewsChatScreen(
+                viewModel = aiNewsChatViewModel,
+                onBack = { navController.popBackStack() }
             )
         }
 
