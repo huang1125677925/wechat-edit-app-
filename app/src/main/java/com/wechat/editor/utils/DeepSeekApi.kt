@@ -1,5 +1,7 @@
 package com.wechat.editor.utils
 
+import com.wechat.editor.model.ChatMessage
+import com.wechat.editor.model.ChatRole
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -305,6 +307,97 @@ object DeepSeekApi {
                     put("content", userPayload)
                 })
             })
+        }
+
+        val request = Request.Builder()
+            .url(BASE_URL)
+            .addHeader("Authorization", "Bearer $key")
+            .addHeader("Content-Type", "application/json")
+            .post(root.toString().toRequestBody(jsonMedia))
+            .build()
+
+        runCatching {
+            client.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    val errMsg = runCatching {
+                        JSONObject(responseBody).optJSONObject("error")?.optString("message")
+                    }.getOrNull()
+                    return@use Result.Error(
+                        errMsg?.takeIf { it.isNotBlank() }
+                            ?: "请求失败 HTTP ${response.code}"
+                    )
+                }
+                val json = JSONObject(responseBody)
+                val choice = json.optJSONArray("choices")?.optJSONObject(0)
+                val content = choice?.optJSONObject("message")?.optString("content")
+                    ?: return@use Result.Error("响应格式异常")
+                val trimmed = content.trim()
+                if (trimmed.isEmpty()) {
+                    return@use Result.Error("模型返回为空")
+                }
+                Result.Success(trimmed)
+            }
+        }.getOrElse { e ->
+            Result.Error(e.localizedMessage ?: e.message ?: "网络错误")
+        }
+    }
+
+    /**
+     * Multi-turn chat grounded in a pre-loaded AI news context.
+     */
+    suspend fun chatWithNewsContext(
+        apiKey: String,
+        newsContextLines: String,
+        feedGeneratedAt: String,
+        windowHours: Int,
+        history: List<ChatMessage>,
+        userMessage: String
+    ): Result = withContext(Dispatchers.IO) {
+        val key = apiKey.trim()
+        if (key.isEmpty()) {
+            return@withContext Result.Error("请先在设置中填写 DeepSeek API Key")
+        }
+
+        val systemPrompt = """
+            你是一位专业的 AI 科技资讯顾问。你手里有一份来自「ai-news-aggregator」开源聚合器的最新资讯列表（标题 + 来源 + 链接），时间窗口约 ${windowHours} 小时，更新时间（UTC）：$feedGeneratedAt。
+
+            【你的能力与职责】
+            - 基于下列资讯列表回答用户的问题，如介绍某条新闻的背景、解读行业动向、对比多条相关新闻等。
+            - 如果用户问的内容可以在列表中找到支撑，请引用相关条目（附带链接）。
+            - 如果列表中没有相关信息，诚实告知「当前资讯未涵盖该话题」，但仍可基于你的通用知识作背景补充，并明确说明「以下是背景知识，非本期资讯」。
+            - 语气专业、清晰，适合中文科技读者；用 Markdown 格式化输出（段落、列表、链接）。
+
+            【禁止】
+            - 不得捏造列表中不存在的链接或新闻细节。
+            - 不要输出与问题无关的冗长开场白。
+
+            【资讯列表】
+            $newsContextLines
+        """.trimIndent()
+
+        val messages = JSONArray().apply {
+            put(JSONObject().apply {
+                put("role", "system")
+                put("content", systemPrompt)
+            })
+            history.forEach { msg ->
+                if (msg.role == ChatRole.SYSTEM) return@forEach
+                put(JSONObject().apply {
+                    put("role", if (msg.role == ChatRole.USER) "user" else "assistant")
+                    put("content", msg.content)
+                })
+            }
+            put(JSONObject().apply {
+                put("role", "user")
+                put("content", userMessage)
+            })
+        }
+
+        val root = JSONObject().apply {
+            put("model", MODEL)
+            put("temperature", 0.6)
+            put("messages", messages)
         }
 
         val request = Request.Builder()
