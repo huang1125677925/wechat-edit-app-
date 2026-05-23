@@ -224,7 +224,6 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
                 FeedBackend.AI_NEWS_AGGREGATOR -> "AI 资讯摘要 · DeepSeek"
             }
             val selectedLineCount = lines.lines().size
-            val attributionBlock = buildAttributionMarkdown(feed, selectedLineCount, backend)
             val template = when (backend) {
                 FeedBackend.PERPS_NEWS -> ArticleTemplate.BUSINESS
                 FeedBackend.AI_NEWS_AGGREGATOR -> ArticleTemplate.TECH
@@ -254,14 +253,9 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
                 }
                 is DeepSeekApi.Result.Success -> {
                     val normalizedDigest = AiNewsDigestMarkdownSanitizer.normalize(deepSeekResult.markdown.trim())
-                    val fullMarkdown = buildString {
-                        append(normalizedDigest)
-                        append("\n\n---\n\n")
-                        append(attributionBlock)
-                    }
                     val article = Article(
                         title = digestTitle,
-                        content = fullMarkdown,
+                        content = normalizedDigest,
                         author = digestAuthor,
                         template = template,
                         layoutSettings = TemplateLayoutProvider.layoutForTemplate(template)
@@ -323,33 +317,6 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
         return when (backend) {
             FeedBackend.AI_NEWS_AGGREGATOR -> "AI 科技动态 · $label 要点（$now）"
             FeedBackend.PERPS_NEWS -> "股市与财经要闻 · $label 要点（$now）"
-        }
-    }
-
-    private fun buildAttributionMarkdown(
-        feed: AiNewsFeed,
-        lineCount: Int,
-        backend: FeedBackend
-    ): String = when (backend) {
-        FeedBackend.AI_NEWS_AGGREGATOR -> {
-            val sourceName = "SuYxh / ai-news-aggregator"
-            val dataUrl = when (feed.windowHours) {
-                24, 168 -> "${AiNewsAggregatorApi.BASE_JSON_URL}/latest-${if (feed.windowHours >= 168) "7d" else "24h"}.json"
-                else -> AiNewsAggregatorApi.BASE_JSON_URL
-            }
-            buildString {
-                append("**数据来源**：开源聚合 [$sourceName](https://github.com/SuYxh/ai-news-aggregator) ")
-                append("（[在线站点](https://suyxh.github.io/ai-news-aggregator/) · ")
-                append("[JSON]($dataUrl)）。聚合更新时间：`${feed.generatedAt}`；本期正文生成依据约 **$lineCount** 条标题链接。\n\n")
-                append("**说明**：正文由 DeepSeek 根据标题归纳撰写，细节请以原文链接为准。")
-            }
-        }
-        FeedBackend.PERPS_NEWS -> buildString {
-            append("**数据来源**：开源项目 [gunksd/Perps-news](https://github.com/gunksd/Perps-news) ")
-            append("（[JSON 快照](${PerpsNewsApi.NEWS_JSON_URL})）。")
-            append("本页按最近 **${feed.windowHours}** 小时从快照中筛选；筛选后条目数：**${feed.totalItems}**；")
-            append("正文生成依据约 **$lineCount** 条标题链接；整理时间戳：`${feed.generatedAt}`。\n\n")
-            append("**说明**：正文由 DeepSeek 根据标题归纳撰写，不构成投资建议；细节与数据请以原文链接为准。")
         }
     }
 
