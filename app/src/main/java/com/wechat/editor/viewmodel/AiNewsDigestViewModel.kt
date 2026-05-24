@@ -65,7 +65,8 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
                 generateError = null,
                 sourceOptions = emptyList(),
                 selectedSourceKeys = emptySet(),
-                items = emptyList()
+                items = emptyList(),
+                sendableItemCount = 0
             )
         }
     }
@@ -76,6 +77,14 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
 
     fun setWindow7d() {
         setWindowHours(168)
+    }
+
+    fun setMaxForModel(n: Int) {
+        _ui.update {
+            it.copy(
+                maxItemsForModel = AiNewsDigestLimits.coerceMaxItemsForModel(n, it.sendableItemCount)
+            )
+        }
     }
 
     private fun setWindowHours(hours: Int) {
@@ -89,7 +98,8 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
                 generateError = null,
                 sourceOptions = emptyList(),
                 selectedSourceKeys = emptySet(),
-                items = emptyList()
+                items = emptyList(),
+                sendableItemCount = 0
             )
         }
     }
@@ -124,7 +134,8 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
                 feedMeta = null,
                 sourceOptions = emptyList(),
                 selectedSourceKeys = emptySet(),
-                items = emptyList()
+                items = emptyList(),
+                sendableItemCount = 0
             )
         }
     }
@@ -133,18 +144,21 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
         loadedFeed = feed
         val sourceOptions = buildSourceOptions(feed.items)
         val selectedSourceKeys = sourceOptions.map { it.key }.toSet()
-        _ui.update {
-            it.copy(
-                isLoadingFeed = false,
-                feedError = null,
-                feedMeta = FeedMeta(
-                    generatedAt = feed.generatedAt,
-                    windowHours = feed.windowHours,
-                    totalItems = feed.totalItems
+        val items = filterItemsBySources(feed.items, selectedSourceKeys)
+        _ui.update { current ->
+            syncItemsIntoState(
+                current.copy(
+                    isLoadingFeed = false,
+                    feedError = null,
+                    feedMeta = FeedMeta(
+                        generatedAt = feed.generatedAt,
+                        windowHours = feed.windowHours,
+                        totalItems = feed.totalItems
+                    ),
+                    sourceOptions = sourceOptions,
+                    selectedSourceKeys = selectedSourceKeys
                 ),
-                sourceOptions = sourceOptions,
-                selectedSourceKeys = selectedSourceKeys,
-                items = filterItemsBySources(feed.items, selectedSourceKeys)
+                items
             )
         }
     }
@@ -156,9 +170,9 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
             if (!selected.add(key)) {
                 selected.remove(key)
             }
-            current.copy(
-                selectedSourceKeys = selected,
-                items = filterItemsBySources(feed.items, selected)
+            syncItemsIntoState(
+                current.copy(selectedSourceKeys = selected),
+                filterItemsBySources(feed.items, selected)
             )
         }
     }
@@ -167,21 +181,30 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
         val feed = loadedFeed ?: return
         _ui.update { current ->
             val selected = current.sourceOptions.map { it.key }.toSet()
-            current.copy(
-                selectedSourceKeys = selected,
-                items = filterItemsBySources(feed.items, selected)
+            syncItemsIntoState(
+                current.copy(selectedSourceKeys = selected),
+                filterItemsBySources(feed.items, selected)
             )
         }
     }
 
     fun clearSourceSelection() {
         val feed = loadedFeed ?: return
-        _ui.update {
-            it.copy(
-                selectedSourceKeys = emptySet(),
-                items = filterItemsBySources(feed.items, emptySet())
+        _ui.update { current ->
+            syncItemsIntoState(
+                current.copy(selectedSourceKeys = emptySet()),
+                filterItemsBySources(feed.items, emptySet())
             )
         }
+    }
+
+    private fun syncItemsIntoState(current: DigestUiState, items: List<AiNewsItem>): DigestUiState {
+        val sendable = AiNewsDigestLimits.sendableCount(items)
+        return current.copy(
+            items = items,
+            sendableItemCount = sendable,
+            maxItemsForModel = AiNewsDigestLimits.coerceMaxItemsForModel(current.maxItemsForModel, sendable)
+        )
     }
 
     /**
@@ -204,9 +227,11 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
             return
         }
 
+        val max = _ui.value.maxItemsForModel
         val lines = _ui.value.items
             .asSequence()
             .filter { it.url.isNotBlank() }
+            .take(max)
             .mapIndexed { index, item -> formatItemLine(index + 1, item) }
             .joinToString("\n")
 
@@ -323,6 +348,8 @@ class AiNewsDigestViewModel(application: Application) : AndroidViewModel(applica
     data class DigestUiState(
         val feedBackend: FeedBackend = FeedBackend.AI_NEWS_AGGREGATOR,
         val windowHours: Int = 24,
+        val maxItemsForModel: Int = AiNewsDigestLimits.DEFAULT_MAX_ITEMS_FOR_MODEL,
+        val sendableItemCount: Int = 0,
         val isLoadingFeed: Boolean = false,
         val feedError: String? = null,
         val feedMeta: FeedMeta? = null,
